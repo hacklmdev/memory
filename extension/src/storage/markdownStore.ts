@@ -51,6 +51,8 @@ export interface MemoryEntry {
   lineNumber: number;
   /** Filename e.g. 'instructions.md' */
   file: string;
+  /** Optional topic slug e.g. 'console-logs' — used for upsert identity */
+  slug?: string;
 }
 
 /**
@@ -108,6 +110,114 @@ export async function appendMemory(category: string, content: string, overrideDa
 }
 
 /**
+ * Insert or update a memory entry identified by slug.
+ *
+ * If an entry with the same slug already exists in the category file, it is
+ * replaced. Otherwise a new entry is appended with the slug prefix.
+ *
+ * @returns 'inserted' | 'updated' — indicates what happened.
+ */
+export async function upsertMemory(
+  category: string,
+  slug: string,
+  content: string,
+  overrideDate?: string
+): Promise<'inserted' | 'updated'> {
+  const filename = CATEGORY_FILES[category];
+  if (!filename) {
+    throw new Error(
+      `Unknown category: ${category}. Valid: ${Object.keys(CATEGORY_FILES).join(', ')}`
+    );
+  }
+
+  await ensureMemoryDir();
+  const filePath = path.join(getMemoryDir(), filename);
+  const entryDate = overrideDate ?? new Date().toISOString().split('T')[0];
+  const slugPrefix = `[${slug}] `;
+  const bulletLine = `- ${slugPrefix}${content.trim()}`;
+
+  return withFileLock(filePath, async () => {
+    let text = '';
+    try {
+      text = await fs.readFile(filePath, 'utf-8');
+    } catch {
+      // File doesn't exist — will create it
+    }
+
+    const lines = text.split('\n');
+    const slugPattern = new RegExp(`^- \\[${escapeRegex(slug)}\\]\\s`);
+    let removedIndex = -1;
+    let removedDateHeaderIndex = -1;
+
+    for (let i = 0; i < lines.length; i++) {
+      if (slugPattern.test(lines[i].trim())) {
+        removedIndex = i;
+        // Check if the date header above is now orphaned (only entry under it)
+        const headerIndex = findDateHeaderAbove(lines, i);
+        if (headerIndex !== -1 && countEntriesUnderHeader(lines, headerIndex) === 1) {
+          removedDateHeaderIndex = headerIndex;
+        }
+        break;
+      }
+    }
+
+    if (removedIndex !== -1) {
+      lines.splice(removedIndex, 1);
+      // If the date header is now orphaned, remove it too
+      if (removedDateHeaderIndex !== -1 && removedDateHeaderIndex < lines.length) {
+        lines.splice(removedDateHeaderIndex, 1);
+      }
+      await fs.writeFile(filePath, lines.join('\n'), 'utf-8');
+    }
+
+    const entry = `\n## ${entryDate}\n${bulletLine}\n`;
+    await fs.appendFile(filePath, entry, 'utf-8');
+
+    return removedIndex !== -1 ? 'updated' : 'inserted';
+  });
+}
+
+function findDateHeaderAbove(lines: string[], bulletIndex: number): number {
+  for (let i = bulletIndex - 1; i >= 0; i--) {
+    if (/^## \d{4}-\d{2}-\d{2}/.test(lines[i])) { return i; }
+    if (/^#\s/.test(lines[i])) { return -1; }
+  }
+  return -1;
+}
+
+function countEntriesUnderHeader(lines: string[], headerIndex: number): number {
+  let count = 0;
+  for (let i = headerIndex + 1; i < lines.length; i++) {
+    if (/^##\s/.test(lines[i])) { break; }
+    if (lines[i].trim().startsWith('- ')) { count++; }
+  }
+  return count;
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Append a conflict entry to .memory/conflicts.log for audit trail.
+ */
+export async function writeConflictLog(
+  file: string,
+  slug: string,
+  oldContent: string,
+  newContent: string
+): Promise<void> {
+  try {
+    const logPath = path.join(getMemoryDir(), 'conflicts.log');
+    const date = new Date().toISOString().split('T')[0];
+    const line = `${date} | ${file} | ${slug} | OLD: "${oldContent}" | NEW: "${newContent}"\n`;
+    await fs.appendFile(logPath, line, 'utf-8');
+  } catch {
+    // Non-fatal
+  }
+}
+
+/**
  * Read all memory entries from a specific category file.
  */
 export async function readCategoryMemories(category: string): Promise<MemoryEntry[]> {
@@ -154,12 +264,15 @@ function parseMemoryFile(text: string, category: string, file: string): MemoryEn
 
     const bulletMatch = line.match(/^- (.+)/);
     if (bulletMatch && currentDate) {
+      const raw = bulletMatch[1].trim();
+      const slugMatch = raw.match(/^\[([^\]]+)\]\s+(.+)/);
       entries.push({
         date: currentDate,
-        content: bulletMatch[1].trim(),
+        content: slugMatch ? slugMatch[2] : raw,
         category,
         lineNumber: i + 1,
         file,
+        slug: slugMatch ? slugMatch[1] : undefined,
       });
     }
   }
@@ -210,10 +323,6 @@ export async function deleteMemory(
     }
   });
 }
-
-// ─────────────────────────────────────────
-// UI helpers (formerly memoryService.ts)
-// ─────────────────────────────────────────
 
 /**
  * Get total memory count (for status bar).

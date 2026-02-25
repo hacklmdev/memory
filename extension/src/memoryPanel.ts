@@ -167,7 +167,7 @@ export async function showMemoryStats(): Promise<void> {
   const stats = [
     { label: '$(database) Total Memories', description: String(memoryCount) },
     { label: '$(calendar) Last Cleanup', description: 'Check .memory/cleanup.log' },
-    { label: '$(pulse) Memory Health', description: memoryCount > 0 ? '✓ Active' : 'Empty' },
+    { label: '$(pulse) Memory Health', description: memoryCount > 0 ? 'Active' : 'Empty' },
   ];
 
   await vscode.window.showQuickPick(stats, {

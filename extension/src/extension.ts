@@ -11,8 +11,6 @@ import { TOOL_IDS } from './toolIds';
 const FIRST_ACTIVATION_KEY = 'hacklm-memory.firstActivation';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  console.log('HackLM Memory activating...');
-
   // ─── 1. Register LM Tools (always — tools must be registered regardless of workspace) ───
   context.subscriptions.push(
     vscode.lm.registerTool(TOOL_IDS.STORE_MEMORY, new StoreMemoryTool(context)),
@@ -21,7 +19,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   if (!workspaceFolder) {
-    console.log('No workspace folder found — HackLM Memory UI inactive.');
     return;
   }
 
@@ -91,9 +88,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     });
   }
 
-  console.log('HackLM Memory activated successfully.');
 }
 
-export function deactivate(): void {
-  console.log('HackLM Memory deactivated.');
-}
+export function deactivate(): void {}

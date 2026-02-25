@@ -5,10 +5,6 @@ import * as fs from 'fs/promises';
 const MEMORY_MARKER_START = '<!-- hacklm-memory:start -->';
 const MEMORY_MARKER_END = '<!-- hacklm-memory:end -->';
 
-// ─────────────────────────────────────────
-// Copilot instructions content
-// ─────────────────────────────────────────
-
 function getCopilotInstructionsSection(): string {
   return `${MEMORY_MARKER_START}
 ## Memory-Augmented Context
@@ -30,10 +26,16 @@ Use \`query_memory\` before answering questions about architecture, conventions,
 where prior context would help. Use \`store_memory\` when the user reveals preferences, corrections,
 quirks, or architectural decisions. Cleanup runs automatically — you don't need to call it.
 
+When calling \`store_memory\`, always provide a \`slug\`: a short kebab-case topic identifier
+(e.g. "console-logs", "async-style", "comments"). Same slug = update, not duplicate.
+Duplicate detection runs automatically via LLM — if an entry is already covered, the store is skipped.
+
 ### Passive Learning
 - When the user expresses a preference or corrects you — store it silently via \`store_memory\`.
 - When a command fails — figure out why, store the lesson, then retry.
 - When you solve something tricky — store how you did it.
+- When a prompt contains declared rules ("remove X", "prefer Y", "never Z") — store them immediately as Instructions or Preferences before acting.
+- After a multi-step session (refactor, cleanup, review) — store a debrief summarising what patterns were applied.
 
 ### Categories
 | Category | What goes there | Example |
@@ -51,9 +53,6 @@ quirks, or architectural decisions. Cleanup runs automatically — you don't nee
 ${MEMORY_MARKER_END}`;
 }
 
-// ─────────────────────────────────────────
-// File operations — upsert with markers
-// ─────────────────────────────────────────
 
 async function upsertManagedSection(
   filePath: string,
@@ -82,10 +81,6 @@ async function upsertManagedSection(
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, 'utf-8');
 }
-
-// ─────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────
 
 /**
  * Generate .github/copilot-instructions.md for the workspace.
@@ -120,6 +115,4 @@ export async function ensureMemoryFiles(workspaceFolder: vscode.WorkspaceFolder)
       await fs.writeFile(filePath, header, 'utf-8');
     }
   }
-
-
 }

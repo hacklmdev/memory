@@ -4,7 +4,7 @@ import { getMemoryCount } from './storage/markdownStore';
 let statusBarItem: vscode.StatusBarItem;
 
 /**
- * Create and show the persistent ⚡ Memory Agent status bar button.
+ * Create and show the persistent Memory Agent status bar button.
  */
 export function createStatusBar(context: vscode.ExtensionContext): vscode.StatusBarItem {
   statusBarItem = vscode.window.createStatusBarItem(
@@ -16,7 +16,6 @@ export function createStatusBar(context: vscode.ExtensionContext): vscode.Status
   statusBarItem.tooltip = 'HackLM Memory — click to open control panel';
   statusBarItem.show();
 
-  // Initial update
   updateStatusBar();
 
   return statusBarItem;

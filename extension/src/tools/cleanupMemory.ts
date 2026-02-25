@@ -6,12 +6,16 @@ import {
   readCategoryMemories,
   deleteMemory,
   appendMemory,
+  upsertMemory,
   getMemoryDir,
   CATEGORY_FILES,
+  type MemoryEntry,
 } from '../storage/markdownStore';
 import { findSimilarClusters, extractKeywords } from '../storage/dedup';
 import { scoreAllEntries } from '../storage/scoring';
 import { getEffectiveLimit } from '../utils';
+
+const MAX_CONFLICTS_LOG_LINES = 50;
 
 /**
  * Run the full cleanup pipeline.
@@ -44,7 +48,6 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
   const entryKey = (e: { category: string; date: string; content: string }) =>
     `${e.category}\0${e.date}\0${e.content}`;
 
-  // ─── Step 1: Merge duplicates ───
   const clusters = findSimilarClusters(allEntries, 0.5);
 
   for (const cluster of clusters) {
@@ -98,7 +101,6 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
     actions.push(`Merged ${cluster.length} similar entries → "${mergedContent.substring(0, 60)}…"`);
   }
 
-  // ─── Step 2: Prune over-limit categories (respects user-configured limits) ───
   for (const category of Object.keys(CATEGORY_FILES)) {
     const limit = getEffectiveLimit(category);
     const raw = await readCategoryMemories(category);
@@ -122,13 +124,20 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
     }
   }
 
-  // ─── Step 3: Write cleanup log ───
+  if (!dryRun) {
+    await consolidateDateGroups();
+    await slugAssignUntagged();
+    await pruneConflictsLog();
+  }
+
   if (!dryRun && actions.length > 0) {
     await writeCleanupLog(actions);
+    await writeCleanupDebrief(mergedCount, prunedCount);
   }
 
   const prefix = dryRun ? 'DRY RUN — no changes made\n\n' : '';
   const finalEntries = dryRun ? allEntries : await readAllMemories();
+  const consolidatedNote = dryRun ? '' : 'Consolidated same-date headers.\n';
 
   if (actions.length === 0) {
     return `${prefix}Memory is already clean! ${allEntries.length} entries across ${Object.keys(CATEGORY_FILES).length} categories.`;
@@ -141,7 +150,7 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
     `After:  ${dryRun ? allEntries.length - mergedCount - prunedCount : finalEntries.length} entries`,
     `Merged: ${mergedCount} duplicates`,
     `Pruned: ${prunedCount} low-scoring`,
-    ``,
+    consolidatedNote,
     `Actions:`,
     ...actions,
   ].join('\n');
@@ -155,5 +164,159 @@ async function writeCleanupLog(actions: string[]): Promise<void> {
     await fs.appendFile(logPath, entry, 'utf-8');
   } catch {
     // Non-fatal — cleanup still succeeded
+  }
+}
+
+// Appended directly (not via StoreMemoryTool) to avoid triggering the auto-cleanup counter.
+async function writeCleanupDebrief(mergedCount: number, prunedCount: number): Promise<void> {
+  const parts: string[] = [];
+  if (mergedCount > 0) { parts.push(`merged ${mergedCount} duplicate(s)`); }
+  if (prunedCount > 0) { parts.push(`pruned ${prunedCount} low-scoring entr${prunedCount === 1 ? 'y' : 'ies'}`); }
+  if (parts.length === 0) { return; }
+  await appendMemory('Quirk', `Last cleanup: ${parts.join(', ')}`).catch(() => {});
+}
+
+/**
+ * Merge multiple `## YYYY-MM-DD` headers with the same date into one block per file.
+ */
+async function consolidateDateGroups(): Promise<void> {
+  const memDir = getMemoryDir();
+  for (const filename of Object.values(CATEGORY_FILES)) {
+    const filePath = path.join(memDir, filename);
+    try {
+      const text = await fs.readFile(filePath, 'utf-8');
+      const consolidated = consolidateText(text);
+      if (consolidated !== text) {
+        await fs.writeFile(filePath, consolidated, 'utf-8');
+      }
+    } catch {
+      // File doesn't exist or can't be read — skip
+    }
+  }
+}
+
+function consolidateText(text: string): string {
+  const lines = text.split('\n');
+  const header: string[] = [];
+  const dateGroups = new Map<string, string[]>();
+  const dateOrder: string[] = [];
+  let currentDate = '';
+  let inHeader = true;
+
+  for (const line of lines) {
+    const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})/);
+    if (dateMatch) {
+      inHeader = false;
+      currentDate = dateMatch[1];
+      if (!dateGroups.has(currentDate)) {
+        dateGroups.set(currentDate, []);
+        dateOrder.push(currentDate);
+      }
+      continue;
+    }
+
+    if (inHeader) {
+      header.push(line);
+      continue;
+    }
+
+    if (currentDate && line.trim().length > 0) {
+      dateGroups.get(currentDate)!.push(line);
+    }
+  }
+
+  const result = [...header];
+  for (const date of dateOrder) {
+    const entries = dateGroups.get(date)!;
+    if (entries.length === 0) { continue; }
+    result.push('', `## ${date}`);
+    result.push(...entries);
+  }
+  result.push('');
+
+  return result.join('\n');
+}
+
+/**
+ * Assign slugs to untagged entries via a single batched LLM call.
+ */
+async function slugAssignUntagged(): Promise<void> {
+  try {
+    const allEntries = await readAllMemories();
+    const untagged = allEntries.filter(e => !e.slug);
+    if (untagged.length === 0) { return; }
+
+    const slugs = await llmAssignSlugs(untagged);
+    if (slugs?.length !== untagged.length) { return; }
+
+    for (let i = 0; i < untagged.length; i++) {
+      const entry = untagged[i];
+      const slug = slugs[i];
+      if (!slug || slug.length === 0) { continue; }
+
+      // Delete the old untagged entry and re-insert with slug
+      const deleted = await deleteMemory(entry.category, entry.date, entry.content);
+      if (deleted) {
+        await upsertMemory(entry.category, slug, entry.content, entry.date);
+      }
+    }
+  } catch {
+    // Non-fatal — slugs will be assigned on the next cleanup
+  }
+}
+
+async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> {
+  try {
+    const models = await vscode.lm.selectChatModels({ family: 'gpt-4o' });
+    const model = models[0];
+    if (!model) { return null; }
+
+    const entryList = entries
+      .map((e, i) => `${i}: "${e.content}"`)
+      .join('\n');
+
+    const prompt = [
+      'Assign a kebab-case topic slug (1-3 words) to each memory entry below.',
+      'Reply as a JSON array of strings, one slug per entry, in the same order.',
+      'Example: ["console-logs", "async-style", "comments"]',
+      '',
+      entryList,
+    ].join('\n');
+
+    const messages = [vscode.LanguageModelChatMessage.User(prompt)];
+    const response = await model.sendRequest(messages, {});
+
+    let result = '';
+    for await (const chunk of response.text) {
+      result += chunk;
+    }
+
+    // Extract JSON array from response (may be wrapped in markdown code block)
+    const jsonMatch = /\[[\s\S]*\]/.exec(result);
+    if (!jsonMatch) { return null; }
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (!Array.isArray(parsed) || parsed.length !== entries.length) { return null; }
+    if (!parsed.every((s: unknown) => typeof s === 'string')) { return null; }
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Keep only the last MAX_CONFLICTS_LOG_LINES lines in conflicts.log.
+ */
+async function pruneConflictsLog(): Promise<void> {
+  try {
+    const logPath = path.join(getMemoryDir(), 'conflicts.log');
+    const text = await fs.readFile(logPath, 'utf-8');
+    const lines = text.split('\n').filter(l => l.trim().length > 0);
+    if (lines.length <= MAX_CONFLICTS_LOG_LINES) { return; }
+    const pruned = lines.slice(-MAX_CONFLICTS_LOG_LINES).join('\n') + '\n';
+    await fs.writeFile(logPath, pruned, 'utf-8');
+  } catch {
+    // File doesn't exist or is empty — nothing to prune
   }
 }
