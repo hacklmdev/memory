@@ -1,0 +1,178 @@
+{
+  "name": "hacklm-memory",
+  "displayName": "HackLM Memory",
+  "description": "Persistent memory layer for VS Code Copilot — learn from interactions, retain insights, improve over time",
+  "version": "1.0.0",
+  "publisher": "hacklm",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hacklm/hacklm-memory"
+  },
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "AI",
+    "Chat"
+  ],
+  "keywords": [
+    "copilot",
+    "memory",
+    "chat",
+    "context",
+    "lm tools"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languageModelTools": [
+      {
+        "name": "hacklm-memory_store_memory",
+        "tags": ["memory", "copilot", "hacklm-memory"],
+        "toolReferenceName": "store_memory",
+        "displayName": "Store Memory",
+        "userDescription": "Save a durable insight about this project for future sessions.",
+        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS query first to avoid duplicates. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken).",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(save)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "category": {
+              "type": "string",
+              "enum": ["Instruction", "Quirk", "Preference", "Decision", "Security"],
+              "description": "The memory category"
+            },
+            "content": {
+              "type": "string",
+              "description": "The insight to store. Should be clear, actionable, and durable. Keep it to one concise line."
+            }
+          },
+          "required": ["category", "content"]
+        }
+      },
+      {
+        "name": "hacklm-memory_query_memory",
+        "tags": ["memory", "copilot", "hacklm-memory"],
+        "toolReferenceName": "query_memory",
+        "displayName": "Query Memory",
+        "userDescription": "Search stored memories for relevant principles, preferences, and decisions.",
+        "modelDescription": "Search stored memories for relevant principles, preferences, best practices, and decisions. Call this before answering questions about architecture, conventions, style, or any topic where prior context would help. Returns the most relevant entries ranked by keyword match and recency.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(search)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query — keywords or a natural language question"
+            },
+            "category": {
+              "type": "string",
+              "enum": ["Instruction", "Quirk", "Preference", "Decision", "Security"],
+              "description": "Optional: filter to a specific category"
+            },
+            "limit": {
+              "type": "number",
+              "description": "Max results to return (default: 10, max: 20)"
+            }
+          },
+          "required": ["query"]
+        }
+      }
+    ],
+    "commands": [
+      {
+        "command": "hacklm-memory.panel",
+        "title": "HackLM Memory: Open Control Panel"
+      },
+      {
+        "command": "hacklm-memory.stats",
+        "title": "HackLM Memory: View Statistics"
+      },
+      {
+        "command": "hacklm-memory.list",
+        "title": "HackLM Memory: List Memories"
+      },
+      {
+        "command": "hacklm-memory.delete",
+        "title": "HackLM Memory: Delete Memory"
+      },
+      {
+        "command": "hacklm-memory.open",
+        "title": "HackLM Memory: Open Memory Folder"
+      },
+      {
+        "command": "hacklm-memory.reinit",
+        "title": "HackLM Memory: Reinitialize Instruction Files"
+      },
+      {
+        "command": "hacklm-memory.cleanup",
+        "title": "HackLM Memory: Run Cleanup"
+      }
+    ],
+    "configuration": {
+      "title": "HackLM Memory",
+      "properties": {
+        "hacklm-memory.autoCleanupFrequency": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Run cleanup automatically after this many store_memory calls"
+        },
+        "hacklm-memory.categoryLimit.Instruction": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Max memories to keep in Instruction category"
+        },
+        "hacklm-memory.categoryLimit.Quirk": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Max memories to keep in Quirk category"
+        },
+        "hacklm-memory.categoryLimit.Preference": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Max memories to keep in Preference category"
+        },
+        "hacklm-memory.categoryLimit.Decision": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Max memories to keep in Decision category"
+        },
+        "hacklm-memory.categoryLimit.Security": {
+          "type": "number",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Max memories to keep in Security category"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --outfile=dist/extension.js --external:vscode",
+    "watch": "npm run build -- --watch",
+    "lint": "tsc --noEmit",
+    "package": "npm run build && vsce package"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.99.0",
+    "@types/node": "^22.0.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}

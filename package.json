@@ -1,0 +1,11 @@
+{
+  "name": "hacklm-memory-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Persistent memory layer for VS Code Copilot",
+  "scripts": {
+    "build": "cd extension && npm run build",
+    "watch": "cd extension && npm run watch",
+    "package": "cd extension && npm run package"
+  }
+}
