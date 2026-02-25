@@ -35,7 +35,7 @@
         "toolReferenceName": "store_memory",
         "displayName": "Store Memory",
         "userDescription": "Save a durable insight about this project for future sessions.",
-        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS query first to avoid duplicates. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken).",
+        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS query first to avoid duplicates. Always provide a slug (kebab-case topic key, e.g. 'console-logs'). Same slug = update, not duplicate. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken).",
         "canBeReferencedInPrompt": true,
         "icon": "$(save)",
         "inputSchema": {
@@ -49,6 +49,10 @@
             "content": {
               "type": "string",
               "description": "The insight to store. Should be clear, actionable, and durable. Keep it to one concise line."
+            },
+            "slug": {
+              "type": "string",
+              "description": "A short kebab-case topic identifier (e.g. 'console-logs', 'async-style'). Same slug in the same category = overwrite, not duplicate."
             }
           },
           "required": ["category", "content"]
