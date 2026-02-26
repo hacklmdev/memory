@@ -14,8 +14,6 @@ Memories stored by HackLM Memory.
 
 - [views-welcome-required] Always add a viewsWelcome contribution for every registered tree view. It shows guidance when the tree is empty instead of a blank panel.
 
-- [tree-context-menu-groups] Tree item context menus include both inline (for delete) and navigation group (for open/reveal) entries. Inline appears as icon buttons on hover; navigation group appears in the right-click menu.
-
 - [lm-calls-centralized] All LM calls go through lm.ts (resolveModel + sendLmRequest). No inline selectChatModels or sendRequest anywhere else.
 
 - [lm-justification-required] Every sendRequest call includes a justification string. It populates the VS Code permission prompt. Never pass an empty options object {}.
@@ -26,8 +24,11 @@ Memories stored by HackLM Memory.
 
 - [lm-on-did-change-models] Subscribe to vscode.lm.onDidChangeChatModels in activate(). Refreshes the status bar when Copilot signs in or out mid-session.
 
-- [gap-analysis-rate-limit] Gap analysis runs every 3rd successful storeMemory call (GAP_ANALYSIS_INTERVAL=3). Skipped if total memories < 5. Counter tracked in globalState under hacklm-memory.gapCounter.
-
 - [session-review-architecture] sessionReview.ts drives programmatic storeMemory enforcement. It makes its own LM call after every Nth store. Extension controls when and what gets stored — model does not need to self-trigger.
 
-- [gap-suggestion-ui] Gap suggestions shown as a canPickMany QuickPick, all pre-selected. User deselects to reject. autoApproveStore=true skips the prompt and stores all suggestions silently.
+- [cleanup-merge-threshold] Cleanup merge threshold is 0.3 (Jaccard). Catches semantically related entries the 0.5 threshold missed. checkDuplicate thresholds (0.8/0.6) are separate — they guard writes, not cleanup.
+
+- [no-cleanup-debrief-in-memory] writeCleanupDebrief removed. Cleanup status belongs in cleanup.log only — never injected into memory as a Quirk entry.
+
+- [gap-analysis-no-changelog] Gap analysis prompt forbids changelog/past-event suggestions. The LM must not suggest entries phrased as "last cleanup did X" or "removed Y yesterday".
+

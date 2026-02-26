@@ -21,3 +21,7 @@ Memories stored by HackLM Memory.
 - [void-cast-fire-forget] Fire-and-forget promises in extension code use void-cast (void somePromise.then(...)). Avoids floating promise lint warnings and makes intent explicit.
 
 - [dedup-thresholds] Similarity thresholds in dedup.ts are named constants: SKIP_THRESHOLD=0.8, UPDATE_THRESHOLD=0.6. Never inline them.
+
+- [quickpick-preselect] When presenting a canPickMany QuickPick for user review, pre-select all items. User deselects to reject. Never present with nothing selected.
+
+- [globalstate-prefix] All globalState keys are namespaced with the extension id prefix (hacklm-memory.*). Never use bare keys — they collide across extensions.
