@@ -288,7 +288,7 @@
         },
         "hacklm-memory.categoryLimit.Instruction": {
           "type": "number",
-          "default": 10,
+          "default": 15,
           "minimum": 1,
           "maximum": 50,
           "markdownDescription": "Max entries to keep in the `Instruction` category."
@@ -309,7 +309,7 @@
         },
         "hacklm-memory.categoryLimit.Decision": {
           "type": "number",
-          "default": 15,
+          "default": 20,
           "minimum": 1,
           "maximum": 50,
           "markdownDescription": "Max entries to keep in the `Decision` category."

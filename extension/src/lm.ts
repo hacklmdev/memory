@@ -6,10 +6,6 @@ export function resolveFamily(): string {
     .get<string>('lmFamily', 'gpt-5-mini');
 }
 
-/**
- * Resolve the configured model family to a chat model instance.
- * Returns null if no matching model is available (Copilot not signed in, etc.).
- */
 export async function resolveModel(): Promise<vscode.LanguageModelChat | null> {
   try {
     const models = await vscode.lm.selectChatModels({ family: resolveFamily() });
@@ -26,7 +22,6 @@ export interface SendLmRequestOptions {
 }
 
 /**
- * Send a request to a language model and stream the full response to a string.
  * - Forwards the cancellation token so users can cancel long calls.
  * - Cleans up the timeout handle via clearTimeout to avoid leaks.
  * - Returns null on any error, timeout, or cancellation (callers fail open).

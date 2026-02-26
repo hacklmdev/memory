@@ -18,6 +18,8 @@ import { getEffectiveLimit } from '../utils';
 import { resolveModel, sendLmRequest } from '../lm';
 
 const MAX_CONFLICTS_LOG_LINES = 50;
+const MERGE_SIMILARITY_THRESHOLD = 0.3;
+const MAX_MERGE_KEYWORDS = 3;
 
 export async function runCleanup(): Promise<string> {
   const actions: string[] = [];
@@ -38,7 +40,7 @@ export async function runCleanup(): Promise<string> {
   await sanitizeEntryContent(allEntries, actions);
   await pruneStaleEntries(allEntries, actions);
 
-  const clusters = findSimilarClusters(allEntries, 0.3);
+  const clusters = findSimilarClusters(allEntries, MERGE_SIMILARITY_THRESHOLD);
 
   for (const cluster of clusters) {
     const sorted = [...cluster].sort((a, b) => a.content.length - b.content.length);
@@ -59,7 +61,7 @@ export async function runCleanup(): Promise<string> {
     }
 
     let mergedContent = winner.content;
-    if (extraInfo.length > 0 && extraInfo.length <= 3) {
+    if (extraInfo.length > 0 && extraInfo.length <= MAX_MERGE_KEYWORDS) {
       mergedContent = `${winner.content} (also: ${extraInfo.join(', ')})`;
     }
 
@@ -254,7 +256,7 @@ async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> 
     });
     if (!result) { return null; }
 
-    // Extract JSON array from response (may be wrapped in markdown code block)
+
     const jsonMatch = /\[[\s\S]*\]/.exec(result);
     if (!jsonMatch) { return null; }
 

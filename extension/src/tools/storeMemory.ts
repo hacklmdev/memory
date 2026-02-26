@@ -74,7 +74,6 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
         );
       }
 
-      // LLM check — 5s timeout, fails open
       if (!slug) {
         const llmVerdict = await this.llmRedundancyCheck(content, allEntries, _token);
         if (llmVerdict) {
@@ -214,7 +213,6 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     return sections.join('\n\n');
   }
 
-  // Non-blocking toast + audit log. Latest entry always wins.
   private checkNegationConflict(
     slug: string,
     existing: MemoryEntry,

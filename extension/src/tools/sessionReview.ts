@@ -15,8 +15,6 @@ interface GapSuggestion {
   content: string;
 }
 
-// ── Rate-limited trigger (called after each successful store) ─────────────────
-
 export async function triggerGapAnalysis(
   justStored: { category: string; content: string; slug?: string },
   allEntries: MemoryEntry[],
@@ -43,8 +41,6 @@ export async function triggerGapAnalysis(
   }
 }
 
-// ── Manual full-session review ────────────────────────────────────────────────
-
 export async function runSessionReview(): Promise<void> {
   const allEntries = await readAllMemories();
   if (allEntries.length < MIN_ENTRIES_FOR_ANALYSIS) {
@@ -64,8 +60,6 @@ export async function runSessionReview(): Promise<void> {
     }
   );
 }
-
-// ── Core LM call ──────────────────────────────────────────────────────────────
 
 async function runGapAnalysis(
   justStored: { category: string; content: string; slug?: string } | null,
@@ -112,8 +106,6 @@ async function runGapAnalysis(
   return parseSuggestions(result);
 }
 
-// ── Response parser ───────────────────────────────────────────────────────────
-
 function parseSuggestions(raw: string): GapSuggestion[] {
   const suggestions: GapSuggestion[] = [];
   for (const line of raw.split('\n')) {
@@ -129,8 +121,6 @@ function parseSuggestions(raw: string): GapSuggestion[] {
   }
   return suggestions.slice(0, MAX_SUGGESTIONS);
 }
-
-// ── UI ────────────────────────────────────────────────────────────────────────
 
 async function promptUserForSuggestions(suggestions: GapSuggestion[]): Promise<void> {
   const items = suggestions.map(s => ({

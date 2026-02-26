@@ -2,8 +2,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { readAllMemories, CATEGORY_FILES, type MemoryEntry } from './storage/markdownStore';
 
-// ── Tree item types ───────────────────────────────────────────────────────────
-
 export class CategoryItem extends vscode.TreeItem {
   constructor(
     public readonly category: string,
@@ -50,8 +48,6 @@ function categoryIcon(category: string): string {
   }
 }
 
-// ── Tree data provider ────────────────────────────────────────────────────────
-
 export type MemoryTreeNode = CategoryItem | MemoryItem;
 
 export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeNode> {
@@ -90,8 +86,6 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeNod
   }
 }
 
-// ── Reveal helper ─────────────────────────────────────────────────────────────
-
 export async function revealEntry(entry: MemoryEntry): Promise<void> {
   const folder = vscode.workspace.workspaceFolders?.[0];
   if (!folder) { return; }
@@ -103,7 +97,7 @@ export async function revealEntry(entry: MemoryEntry): Promise<void> {
     const doc = await vscode.workspace.openTextDocument(uri);
     const editor = await vscode.window.showTextDocument(doc, { preview: false });
 
-    // Move cursor to the entry's line (1-based → 0-based)
+
     const line = Math.max(0, entry.lineNumber - 1);
     const pos = new vscode.Position(line, 0);
     editor.selection = new vscode.Selection(pos, pos);

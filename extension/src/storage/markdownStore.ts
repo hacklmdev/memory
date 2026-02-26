@@ -18,7 +18,6 @@ async function withFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<
     return await fn();
   } finally {
     releaseLock();
-    // Clean up map entry once we're the last holder
     if (_fileLocks.get(filePath) === lockHeld) {
       _fileLocks.delete(filePath);
     }
@@ -34,10 +33,10 @@ export const CATEGORY_FILES: Record<string, string> = {
 };
 
 export const CATEGORY_LIMITS: Record<string, number> = {
-  'Instruction': 10,
+  'Instruction': 15,
   'Quirk': 20,
   'Preference': 20,
-  'Decision': 15,
+  'Decision': 20,
   'Security': 15,
 };
 
