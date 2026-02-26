@@ -30,7 +30,7 @@ export async function runCleanup(): Promise<string> {
   let mergedCount = 0;
   let prunedCount = 0;
 
-  const clusters = findSimilarClusters(allEntries, 0.5);
+  const clusters = findSimilarClusters(allEntries, 0.3);
 
   for (const cluster of clusters) {
     const sorted = [...cluster].sort((a, b) => a.content.length - b.content.length);
@@ -90,13 +90,13 @@ export async function runCleanup(): Promise<string> {
 
   if (actions.length > 0) {
     await writeCleanupLog(actions);
-    await writeCleanupDebrief(mergedCount, prunedCount);
   }
 
   const finalEntries = await readAllMemories();
 
   if (actions.length === 0) {
-    return `Memory is already clean! ${allEntries.length} entries across ${Object.keys(CATEGORY_FILES).length} categories.`;
+    const populatedCategories = new Set(allEntries.map(e => e.category)).size;
+    return `Memory is already clean! ${allEntries.length} entries across ${populatedCategories} categories.`;
   }
 
   return [
@@ -121,15 +121,6 @@ async function writeCleanupLog(actions: string[]): Promise<void> {
   } catch {
     // Non-fatal — cleanup still succeeded
   }
-}
-
-// Upserted directly to avoid triggering the auto-cleanup counter; fixed slug prevents duplicates.
-async function writeCleanupDebrief(mergedCount: number, prunedCount: number): Promise<void> {
-  const parts: string[] = [];
-  if (mergedCount > 0) { parts.push(`merged ${mergedCount} duplicate(s)`); }
-  if (prunedCount > 0) { parts.push(`pruned ${prunedCount} low-scoring entr${prunedCount === 1 ? 'y' : 'ies'}`); }
-  if (parts.length === 0) { return; }
-  await upsertMemory('Quirk', 'last-cleanup', `Last cleanup: ${parts.join(', ')}`).catch(() => {});
 }
 
 async function slugAssignUntagged(): Promise<void> {

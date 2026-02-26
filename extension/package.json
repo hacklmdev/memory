@@ -129,7 +129,7 @@
         "command": "hacklm-memory.cleanup",
         "category": "HackLM Memory",
         "title": "Run Cleanup",
-        "icon": "$(brush)"
+        "icon": "$(run-all)"
       },
       {
         "command": "hacklm-memory.refresh",

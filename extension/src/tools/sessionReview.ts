@@ -90,7 +90,10 @@ async function runGapAnalysis(
     '',
     `Identify up to ${MAX_SUGGESTIONS} decisions, conventions, or patterns clearly implied by the above but not yet captured.`,
     'Each suggestion must be durable (matters next week), specific (one clear rule), and not already covered.',
+    'Never suggest entries that describe past events, completed tasks, or changelog notes.',
+    'Content must be plain text only. No brackets, slug references, or cross-references in the content field.',
     '',
+
     'Reply with one line per suggestion in this exact format:',
     'SUGGESTION:[Category]:[kebab-slug]:[content]',
     '',
