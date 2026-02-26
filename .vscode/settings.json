@@ -1,3 +1,4 @@
 {
-  "hacklm-memory.autoCleanupFrequency": 10
+  "hacklm-memory.autoCleanupFrequency": 10,
+  "hacklm-memory.lmFamily": "claude-haiku-4.5"
 }
