@@ -9,6 +9,15 @@ export interface QueryMemoryInput {
 }
 
 export class QueryMemoryTool implements vscode.LanguageModelTool<QueryMemoryInput> {
+  prepareInvocation(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<QueryMemoryInput>,
+    _token: vscode.CancellationToken
+  ): vscode.ProviderResult<vscode.PreparedToolInvocation> {
+    return {
+      invocationMessage: `Searching memory for "${options.input.query}"…`,
+    };
+  }
+
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<QueryMemoryInput>,
     _token: vscode.CancellationToken
@@ -17,9 +26,6 @@ export class QueryMemoryTool implements vscode.LanguageModelTool<QueryMemoryInpu
 
     try {
       const maxResults = Math.min(limit ?? 10, 20);
-      // Always load all entries and pass the category filter into searchMemories.
-      // This keeps a single, consistent filtering path and avoids double-filtering
-      // that could silently mask regressions.
       const entries = await readAllMemories();
 
       const results = searchMemories(entries, query, { limit: maxResults, category });
@@ -31,7 +37,7 @@ export class QueryMemoryTool implements vscode.LanguageModelTool<QueryMemoryInpu
       }
 
       const formatted = results
-        .map(r => `[${r.category}] (${r.date}) ${r.content}`)
+        .map(r => `[${r.category}] ${r.content}`)
         .join('\n');
 
       return new vscode.LanguageModelToolResult([

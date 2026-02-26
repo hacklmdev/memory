@@ -29,6 +29,33 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     this.context = context;
   }
 
+  prepareInvocation(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<StoreMemoryInput>,
+    _token: vscode.CancellationToken
+  ): vscode.ProviderResult<vscode.PreparedToolInvocation> {
+    const { category, content, slug } = options.input;
+    const slugLabel = slug ? ` [${slug}]` : '';
+    const autoApprove = vscode.workspace
+      .getConfiguration('hacklm-memory')
+      .get<boolean>('autoApproveStore', false);
+
+    if (autoApprove) {
+      return {
+        invocationMessage: `Saving to memory${slugLabel}…`,
+      };
+    }
+
+    return {
+      invocationMessage: `Saving to memory${slugLabel}…`,
+      confirmationMessages: {
+        title: `Save to Memory — ${category}`,
+        message: new vscode.MarkdownString(
+          `**${category}**${slugLabel}\n\n> ${content}\n\nStore this memory?`
+        ),
+      },
+    };
+  }
+
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<StoreMemoryInput>,
     _token: vscode.CancellationToken
@@ -38,7 +65,6 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     try {
       const allEntries = await readAllMemories();
 
-      // Fast local dedup (keyword overlap within same category)
       const dedupResult = checkDuplicate(content, allEntries, category);
       if (dedupResult.action === 'skip') {
         return this.textResult(
@@ -46,7 +72,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
         );
       }
 
-      // LLM redundancy check across all files (5s timeout, fail open)
+      // LLM check — 5s timeout, fails open
       if (!slug) {
         const llmVerdict = await this.llmRedundancyCheck(content, allEntries);
         if (llmVerdict) {
@@ -56,12 +82,11 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
         }
       }
 
-      // Handle keyword-dedup 'update' action (delete old entry before writing)
       if (dedupResult.action === 'update' && dedupResult.matchedEntry) {
         const deleted = await deleteMemory(
           dedupResult.matchedEntry.category,
-          dedupResult.matchedEntry.date,
-          dedupResult.matchedEntry.content
+          dedupResult.matchedEntry.content,
+          dedupResult.matchedEntry.slug
         );
         if (!deleted) {
           throw new Error(
@@ -70,18 +95,16 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
         }
       }
 
-      // Enforce category limit — evict weakest entry if at capacity
       const categoryEntries = await readCategoryMemories(category);
       const limit = getEffectiveLimit(category);
       if (categoryEntries.length >= limit) {
         const weakest = findWeakest(categoryEntries, 1);
         if (weakest.length > 0) {
           const victim = weakest[0].entry;
-          await deleteMemory(victim.category, victim.date, victim.content);
+          await deleteMemory(victim.category, victim.content, victim.slug);
         }
       }
 
-      // Write: slug path uses upsert, legacy path uses append
       let actionVerb: string;
       if (slug) {
         const existing = categoryEntries.find(e => e.slug === slug);
@@ -96,6 +119,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
       }
 
       await this.tickCleanupCounter();
+      await this.context.workspaceState.update('hacklm-memory.lastStoreTurn', Date.now());
 
       const updateNote =
         dedupResult.action === 'update'
@@ -117,11 +141,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     ]);
   }
 
-  /**
-   * Ask an LLM whether the new content is already covered by any existing
-   * entry across all memory files. Returns the covering entry or null.
-   * Fails open: timeout / errors → null (proceed with write).
-   */
+  // Fails open: timeout / errors → null (proceed with write).
   private async llmRedundancyCheck(
     newContent: string,
     allEntries: MemoryEntry[]
@@ -145,7 +165,8 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
         'NEW',
       ].join('\n');
 
-      const models = await vscode.lm.selectChatModels({ family: 'gpt-4o' });
+      const family = vscode.workspace.getConfiguration('hacklm-memory').get<string>('lmFamily', 'gpt-5-mini');
+      const models = await vscode.lm.selectChatModels({ family });
       const model = models[0];
       if (!model) { return null; }
 
@@ -172,9 +193,6 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     }
   }
 
-  /**
-   * Format entries as a prompt section, capped at MAX_ENTRIES_PER_FILE_FOR_LLM per file.
-   */
   private groupEntriesForPrompt(entries: MemoryEntry[]): string {
     const byFile = new Map<string, MemoryEntry[]>();
     for (const entry of entries) {
@@ -194,10 +212,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     return sections.join('\n\n');
   }
 
-  /**
-   * If overwriting a slug, check for negation conflicts (e.g. "always X" vs "never X").
-   * Non-blocking toast + audit log. Latest entry always wins.
-   */
+  // Non-blocking toast + audit log. Latest entry always wins.
   private checkNegationConflict(
     slug: string,
     existing: MemoryEntry,
@@ -213,9 +228,6 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     }
   }
 
-  /**
-   * Increment the store counter and trigger auto-cleanup when the threshold is reached.
-   */
   private async tickCleanupCounter(): Promise<void> {
     const key = 'hacklm-memory.storeCount';
     const config = vscode.workspace.getConfiguration('hacklm-memory');

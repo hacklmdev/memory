@@ -7,6 +7,7 @@ import {
   deleteMemory,
   appendMemory,
   upsertMemory,
+  migrateFiles,
   getMemoryDir,
   CATEGORY_FILES,
   type MemoryEntry,
@@ -17,17 +18,6 @@ import { getEffectiveLimit } from '../utils';
 
 const MAX_CONFLICTS_LOG_LINES = 50;
 
-/**
- * Run the full cleanup pipeline.
- *
- * Steps:
- *   1. Find clusters of similar memories → merge
- *   2. Score all entries → prune lowest-scoring excess per category
- *   3. Write cleanup log
- *
- * @param dryRun  If true, compute changes but do not write anything.
- * @returns       Human-readable report string.
- */
 export async function runCleanup(dryRun: boolean): Promise<string> {
   const allEntries = await readAllMemories();
 
@@ -45,19 +35,15 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
    * category without actually writing to disk.
    */
   const virtuallyDeleted = new Set<string>();
-  const entryKey = (e: { category: string; date: string; content: string }) =>
-    `${e.category}\0${e.date}\0${e.content}`;
+  const entryKey = (e: { category: string; content: string }) =>
+    `${e.category}\0${e.content}`;
 
   const clusters = findSimilarClusters(allEntries, 0.5);
 
   for (const cluster of clusters) {
     if (cluster.length < 2) { continue; }
 
-    const sorted = [...cluster].sort((a, b) => {
-      const dateDiff = b.date.localeCompare(a.date);
-      if (dateDiff !== 0) { return dateDiff; }
-      return a.content.length - b.content.length;
-    });
+    const sorted = [...cluster].sort((a, b) => a.content.length - b.content.length);
 
     const winner = sorted[0];
     const losers = sorted.slice(1);
@@ -81,19 +67,19 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
 
     if (!dryRun) {
       for (const loser of losers) {
-        await deleteMemory(loser.category, loser.date, loser.content);
+        await deleteMemory(loser.category, loser.content, loser.slug);
       }
       if (mergedContent !== winner.content) {
-        await deleteMemory(winner.category, winner.date, winner.content);
-        // Preserve the original date so the winner is not re-stamped as today
-        await appendMemory(winner.category, mergedContent, winner.date);
+        await deleteMemory(winner.category, winner.content, winner.slug);
+        await appendMemory(winner.category, mergedContent);
       }
     } else {
+      // Only losers are truly removed; the winner survives (possibly with updated
+      // content) so it must NOT be placed in virtuallyDeleted — doing so would
+      // make the prune step see one fewer entry than will really exist, causing
+      // it to miss prune candidates that the real run would catch.
       for (const loser of losers) {
         virtuallyDeleted.add(entryKey(loser));
-      }
-      if (mergedContent !== winner.content) {
-        virtuallyDeleted.add(entryKey(winner));
       }
     }
 
@@ -111,11 +97,11 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
     if (categoryEntries.length <= limit) { continue; }
 
     const scored = scoreAllEntries(categoryEntries);
-    const toRemove = scored.slice(limit); // lowest-scoring excess
+    const toRemove = scored.slice(limit);
 
     for (const item of toRemove) {
       if (!dryRun) {
-        await deleteMemory(item.entry.category, item.entry.date, item.entry.content);
+        await deleteMemory(item.entry.category, item.entry.content, item.entry.slug);
       }
       prunedCount++;
       actions.push(
@@ -125,7 +111,7 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
   }
 
   if (!dryRun) {
-    await consolidateDateGroups();
+    await migrateFiles();
     await slugAssignUntagged();
     await pruneConflictsLog();
   }
@@ -137,7 +123,6 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
 
   const prefix = dryRun ? 'DRY RUN — no changes made\n\n' : '';
   const finalEntries = dryRun ? allEntries : await readAllMemories();
-  const consolidatedNote = dryRun ? '' : 'Consolidated same-date headers.\n';
 
   if (actions.length === 0) {
     return `${prefix}Memory is already clean! ${allEntries.length} entries across ${Object.keys(CATEGORY_FILES).length} categories.`;
@@ -150,7 +135,6 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
     `After:  ${dryRun ? allEntries.length - mergedCount - prunedCount : finalEntries.length} entries`,
     `Merged: ${mergedCount} duplicates`,
     `Pruned: ${prunedCount} low-scoring`,
-    consolidatedNote,
     `Actions:`,
     ...actions,
   ].join('\n');
@@ -167,79 +151,15 @@ async function writeCleanupLog(actions: string[]): Promise<void> {
   }
 }
 
-// Appended directly (not via StoreMemoryTool) to avoid triggering the auto-cleanup counter.
+// Upserted directly to avoid triggering the auto-cleanup counter; fixed slug prevents duplicates.
 async function writeCleanupDebrief(mergedCount: number, prunedCount: number): Promise<void> {
   const parts: string[] = [];
   if (mergedCount > 0) { parts.push(`merged ${mergedCount} duplicate(s)`); }
   if (prunedCount > 0) { parts.push(`pruned ${prunedCount} low-scoring entr${prunedCount === 1 ? 'y' : 'ies'}`); }
   if (parts.length === 0) { return; }
-  await appendMemory('Quirk', `Last cleanup: ${parts.join(', ')}`).catch(() => {});
+  await upsertMemory('Quirk', 'last-cleanup', `Last cleanup: ${parts.join(', ')}`).catch(() => {});
 }
 
-/**
- * Merge multiple `## YYYY-MM-DD` headers with the same date into one block per file.
- */
-async function consolidateDateGroups(): Promise<void> {
-  const memDir = getMemoryDir();
-  for (const filename of Object.values(CATEGORY_FILES)) {
-    const filePath = path.join(memDir, filename);
-    try {
-      const text = await fs.readFile(filePath, 'utf-8');
-      const consolidated = consolidateText(text);
-      if (consolidated !== text) {
-        await fs.writeFile(filePath, consolidated, 'utf-8');
-      }
-    } catch {
-      // File doesn't exist or can't be read — skip
-    }
-  }
-}
-
-function consolidateText(text: string): string {
-  const lines = text.split('\n');
-  const header: string[] = [];
-  const dateGroups = new Map<string, string[]>();
-  const dateOrder: string[] = [];
-  let currentDate = '';
-  let inHeader = true;
-
-  for (const line of lines) {
-    const dateMatch = line.match(/^## (\d{4}-\d{2}-\d{2})/);
-    if (dateMatch) {
-      inHeader = false;
-      currentDate = dateMatch[1];
-      if (!dateGroups.has(currentDate)) {
-        dateGroups.set(currentDate, []);
-        dateOrder.push(currentDate);
-      }
-      continue;
-    }
-
-    if (inHeader) {
-      header.push(line);
-      continue;
-    }
-
-    if (currentDate && line.trim().length > 0) {
-      dateGroups.get(currentDate)!.push(line);
-    }
-  }
-
-  const result = [...header];
-  for (const date of dateOrder) {
-    const entries = dateGroups.get(date)!;
-    if (entries.length === 0) { continue; }
-    result.push('', `## ${date}`);
-    result.push(...entries);
-  }
-  result.push('');
-
-  return result.join('\n');
-}
-
-/**
- * Assign slugs to untagged entries via a single batched LLM call.
- */
 async function slugAssignUntagged(): Promise<void> {
   try {
     const allEntries = await readAllMemories();
@@ -254,10 +174,9 @@ async function slugAssignUntagged(): Promise<void> {
       const slug = slugs[i];
       if (!slug || slug.length === 0) { continue; }
 
-      // Delete the old untagged entry and re-insert with slug
-      const deleted = await deleteMemory(entry.category, entry.date, entry.content);
+      const deleted = await deleteMemory(entry.category, entry.content, entry.slug);
       if (deleted) {
-        await upsertMemory(entry.category, slug, entry.content, entry.date);
+        await upsertMemory(entry.category, slug, entry.content);
       }
     }
   } catch {
@@ -267,7 +186,8 @@ async function slugAssignUntagged(): Promise<void> {
 
 async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> {
   try {
-    const models = await vscode.lm.selectChatModels({ family: 'gpt-4o' });
+    const family = vscode.workspace.getConfiguration('hacklm-memory').get<string>('lmFamily', 'gpt-5-mini');
+    const models = await vscode.lm.selectChatModels({ family });
     const model = models[0];
     if (!model) { return null; }
 
@@ -305,9 +225,6 @@ async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> 
   }
 }
 
-/**
- * Keep only the last MAX_CONFLICTS_LOG_LINES lines in conflicts.log.
- */
 async function pruneConflictsLog(): Promise<void> {
   try {
     const logPath = path.join(getMemoryDir(), 'conflicts.log');

@@ -3,9 +3,6 @@ import { getMemoryCount } from './storage/markdownStore';
 
 let statusBarItem: vscode.StatusBarItem;
 
-/**
- * Create and show the persistent Memory Agent status bar button.
- */
 export function createStatusBar(context: vscode.ExtensionContext): vscode.StatusBarItem {
   statusBarItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
@@ -21,9 +18,6 @@ export function createStatusBar(context: vscode.ExtensionContext): vscode.Status
   return statusBarItem;
 }
 
-/**
- * Update the status bar text with current memory count.
- */
 export async function updateStatusBar(): Promise<void> {
   if (!statusBarItem) return;
 

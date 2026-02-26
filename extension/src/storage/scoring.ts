@@ -1,5 +1,4 @@
 import { type MemoryEntry } from './markdownStore';
-import { daysBetween } from '../utils';
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   'Security': 25,
@@ -12,22 +11,10 @@ const CATEGORY_WEIGHT: Record<string, number> = {
 export interface ScoredEntry {
   entry: MemoryEntry;
   score: number;
-  breakdown: { age: number; category: number; brevity: number; specificity: number };
+  breakdown: { category: number; brevity: number; specificity: number };
 }
 
-export function scoreEntry(entry: MemoryEntry, referenceDate?: string): ScoredEntry {
-  const today = referenceDate ?? new Date().toISOString().split('T')[0];
-  const daysSince = daysBetween(entry.date, today);
-
-  let ageScore: number;
-  if (daysSince <= 1) { ageScore = 20; }
-  else if (daysSince <= 7) { ageScore = 17; }
-  else if (daysSince <= 14) { ageScore = 14; }
-  else if (daysSince <= 30) { ageScore = 10; }
-  else if (daysSince <= 60) { ageScore = 6; }
-  else if (daysSince <= 90) { ageScore = 3; }
-  else { ageScore = 1; }
-
+export function scoreEntry(entry: MemoryEntry): ScoredEntry {
   const categoryScore = CATEGORY_WEIGHT[entry.category] ?? 10;
 
   const charCount = entry.content.length;
@@ -39,12 +26,12 @@ export function scoreEntry(entry: MemoryEntry, referenceDate?: string): ScoredEn
   else { brevityScore = 2; }
 
   const specificityScore = measureSpecificity(entry.content);
-  const totalScore = ageScore + categoryScore + brevityScore + specificityScore;
+  const totalScore = categoryScore + brevityScore + specificityScore;
 
   return {
     entry,
     score: totalScore,
-    breakdown: { age: ageScore, category: categoryScore, brevity: brevityScore, specificity: specificityScore },
+    breakdown: { category: categoryScore, brevity: brevityScore, specificity: specificityScore },
   };
 }
 

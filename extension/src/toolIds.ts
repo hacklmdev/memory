@@ -1,5 +1,5 @@
-/** Tool IDs as registered in package.json languageModelTools and vscode.lm.registerTool */
 export const TOOL_IDS = {
-  STORE_MEMORY: 'hacklm-memory_store_memory',
-  QUERY_MEMORY: 'hacklm-memory_query_memory',
+  STORE_MEMORY: 'hacklm-memory_storeMemory',
+  QUERY_MEMORY: 'hacklm-memory_queryMemory',
+  HARVEST_MEMORY: 'hacklm-memory_harvestMemory',
 } as const;

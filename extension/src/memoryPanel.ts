@@ -2,10 +2,6 @@ import * as vscode from 'vscode';
 import { getMemoryCount } from './storage/markdownStore';
 import { runCleanup } from './tools/cleanupMemory';
 
-/**
- * Memory Control Panel — central place to browse, clean and configure memories.
- */
-
 interface PanelAction {
   label: string;
   description?: string;
@@ -96,6 +92,60 @@ async function showSettings(): Promise<void> {
   const config = vscode.workspace.getConfiguration('hacklm-memory');
 
   const options = [
+    {
+      label: '$(hubot) Language Model',
+      description: `Current: ${config.get('lmFamily', 'gpt-5-mini')}`,
+      async action() {
+        let availableModels: vscode.QuickPickItem[] = [];
+        try {
+          const allModels = await vscode.lm.selectChatModels();
+          const families = [...new Set(allModels.map(m => m.family))].sort((a, b) => a.localeCompare(b));
+          availableModels = families.map(f => ({
+            label: f,
+            description: allModels.find(m => m.family === f)?.name ?? '',
+            picked: f === config.get('lmFamily', 'gpt-5-mini'),
+          }));
+        } catch {
+        }
+
+        if (availableModels.length === 0) {
+          const family = await vscode.window.showInputBox({
+            prompt: 'Enter the language model family to use (e.g. gpt-5-mini, gpt-4o, claude-sonnet)',
+            value: String(config.get('lmFamily', 'gpt-5-mini')),
+          });
+          if (family) {
+            await config.update('lmFamily', family, vscode.ConfigurationTarget.Workspace);
+            vscode.window.showInformationMessage(`Language model set to "${family}".`);
+          }
+          return;
+        }
+
+        availableModels.push({
+          label: '$(edit) Enter manually…',
+          description: 'Type a custom model family name',
+        });
+
+        const selected = await vscode.window.showQuickPick(availableModels, {
+          placeHolder: 'Select language model family for LLM operations',
+        });
+
+        if (!selected) { return; }
+
+        let family: string | undefined = selected.label;
+
+        if (family === '$(edit) Enter manually…') {
+          family = await vscode.window.showInputBox({
+            prompt: 'Enter the language model family to use',
+            value: String(config.get('lmFamily', 'gpt-5-mini')),
+          });
+        }
+
+        if (family) {
+          await config.update('lmFamily', family, vscode.ConfigurationTarget.Workspace);
+          vscode.window.showInformationMessage(`Language model set to "${family}".`);
+        }
+      },
+    },
     {
       label: '$(symbol-numeric) Auto-Cleanup Frequency',
       description: `Current: every ${config.get('autoCleanupFrequency', 10)} store operations`,
