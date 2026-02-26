@@ -30,12 +30,12 @@
   "contributes": {
     "languageModelTools": [
       {
-        "name": "hacklm-memory_store_memory",
+        "name": "hacklm-memory_storeMemory",
         "tags": ["memory", "copilot", "hacklm-memory"],
-        "toolReferenceName": "store_memory",
+        "toolReferenceName": "storeMemory",
         "displayName": "Store Memory",
         "userDescription": "Save a durable insight about this project for future sessions.",
-        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS query first to avoid duplicates. Always provide a slug (kebab-case topic key, e.g. 'console-logs'). Same slug = update, not duplicate. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken).",
+        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS call queryMemory first to avoid duplicates. Always provide a slug (kebab-case topic key, e.g. 'console-logs'). Same slug = update, not duplicate. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken).",
         "canBeReferencedInPrompt": true,
         "icon": "$(save)",
         "inputSchema": {
@@ -59,9 +59,9 @@
         }
       },
       {
-        "name": "hacklm-memory_query_memory",
+        "name": "hacklm-memory_queryMemory",
         "tags": ["memory", "copilot", "hacklm-memory"],
-        "toolReferenceName": "query_memory",
+        "toolReferenceName": "queryMemory",
         "displayName": "Query Memory",
         "userDescription": "Search stored memories for relevant principles, preferences, and decisions.",
         "modelDescription": "Search stored memories for relevant principles, preferences, best practices, and decisions. Call this before answering questions about architecture, conventions, style, or any topic where prior context would help. Returns the most relevant entries ranked by keyword match and recency.",
@@ -85,6 +85,44 @@
             }
           },
           "required": ["query"]
+        }
+      },
+      {
+        "name": "hacklm-memory_harvestMemory",
+        "tags": ["memory", "copilot", "hacklm-memory"],
+        "toolReferenceName": "harvestMemory",
+        "displayName": "Harvest Memory",
+        "userDescription": "Automatically capture durable learnings at the end of a chat turn.",
+        "modelDescription": "Call at the end of every response to capture durable learnings from this turn. Provide an array of findings worth persisting across sessions. Skip entirely if you already called storeMemory this turn. Only include things that will matter next week — skip anything session-specific, obvious, or already known.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(lightbulb)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "findings": {
+              "type": "array",
+              "description": "Durable learnings to persist from this turn.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string",
+                    "enum": ["Instruction", "Quirk", "Preference", "Decision", "Security"]
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Clear, actionable, one-line insight."
+                  },
+                  "slug": {
+                    "type": "string",
+                    "description": "Optional kebab-case topic key. Same slug = update, not duplicate."
+                  }
+                },
+                "required": ["category", "content"]
+              }
+            }
+          },
+          "required": ["findings"]
         }
       }
     ],
@@ -121,6 +159,11 @@
     "configuration": {
       "title": "HackLM Memory",
       "properties": {
+        "hacklm-memory.lmFamily": {
+          "type": "string",
+          "default": "gpt-5-mini",
+          "description": "Language model family to use for LLM-assisted operations (e.g. 'gpt-5-mini', 'gpt-4o', 'claude-sonnet')"
+        },
         "hacklm-memory.autoCleanupFrequency": {
           "type": "number",
           "default": 10,
@@ -162,6 +205,11 @@
           "minimum": 1,
           "maximum": 50,
           "description": "Max memories to keep in Security category"
+        },
+        "hacklm-memory.autoApproveStore": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip the confirmation prompt when saving to memory (store_memory). Enable only if you trust the agent's judgment."
         }
       }
     }
