@@ -22,8 +22,6 @@ Memories stored by HackLM Memory.
 
 - [lm-timeout-cleanup] LM timeouts use clearTimeout after Promise.race resolves. Never leave a setTimeout handle dangling after the LM call completes.
 
-- [lm-on-did-change-models] Subscribe to vscode.lm.onDidChangeChatModels in activate(). Refreshes the status bar when Copilot signs in or out mid-session.
-
 - [session-review-architecture] sessionReview.ts drives programmatic storeMemory enforcement. It makes its own LM call after every Nth store. Extension controls when and what gets stored — model does not need to self-trigger.
 
 - [cleanup-merge-threshold] Cleanup merge threshold is 0.3 (Jaccard). Catches semantically related entries the 0.5 threshold missed. checkDuplicate thresholds (0.8/0.6) are separate — they guard writes, not cleanup.
@@ -32,3 +30,7 @@ Memories stored by HackLM Memory.
 
 - [gap-analysis-no-changelog] Gap analysis prompt forbids changelog/past-event suggestions. The LM must not suggest entries phrased as "last cleanup did X" or "removed Y yesterday".
 
+- [category-limits-rationale] Instruction=15, Decision=20, others unchanged. Instructions and Decisions grow fastest on active projects. Context length is not the constraint — quality is.
+
+
+- [model-resolution] Model resolution always happens inside lm.ts. Callers pass a family string or nothing. They never call vscode.lm.selectChatModels directly. This keeps fallback logic in one place.

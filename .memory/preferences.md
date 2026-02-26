@@ -25,3 +25,16 @@ Memories stored by HackLM Memory.
 - [quickpick-preselect] When presenting a canPickMany QuickPick for user review, pre-select all items. User deselects to reject. Never present with nothing selected.
 
 - [globalstate-prefix] All globalState keys are namespaced with the extension id prefix (hacklm-memory.*). Never use bare keys — they collide across extensions.
+
+- [globalstate-cleanup-log-key] The cleanup log is stored under a namespaced globalState key, same as all other extension state. Never write it to a bare key or a separate file outside globalState.
+
+- [tree-view-message-on-empty] When a tree view has no data to show, set treeView.message to a short guidance string in code. This supplements viewsWelcome and handles dynamic empty states after initial load.
+
+- [globalstate-keys-enumerated] All globalState key names are defined as constants in a single file. Never scatter bare string keys across modules.
+
+- [tree-item-context-value] Every TreeItem that supports commands sets a contextValue string. Without it, when-clause conditions in package.json menus cannot target that item type.
+
+
+- [dedup-cleanup-thresholds] Dedup thresholds and cleanup merge thresholds serve different purposes. Never unify them into a single constant. Write thresholds guard against storing duplicates. Cleanup thresholds control when stored entries get merged or removed.
+
+- [globalstate-keys] All globalState key constants live in one file. No module defines its own key inline. Import from the constants file or the key does not exist.
