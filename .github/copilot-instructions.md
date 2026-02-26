@@ -20,7 +20,7 @@ Call `storeMemory` (with a kebab-case `slug`) when:
 1. User states a preference or rule → store as Instruction or Preference **before** acting
 2. User corrects you → store the correction
 3. A command or build fails → store root cause and fix
-4. You solve something non-obvious → store how
+4. After completing any implementation task → store each architectural decision, convention, or pattern applied that is not already in memory. Do this **before ending the turn**.
 
 Same slug = update, not duplicate.
 
