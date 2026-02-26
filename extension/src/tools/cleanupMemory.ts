@@ -15,6 +15,7 @@ import {
 import { findSimilarClusters, extractKeywords } from '../storage/dedup';
 import { scoreAllEntries } from '../storage/scoring';
 import { getEffectiveLimit } from '../utils';
+import { resolveModel, sendLmRequest } from '../lm';
 
 const MAX_CONFLICTS_LOG_LINES = 50;
 
@@ -41,8 +42,6 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
   const clusters = findSimilarClusters(allEntries, 0.5);
 
   for (const cluster of clusters) {
-    if (cluster.length < 2) { continue; }
-
     const sorted = [...cluster].sort((a, b) => a.content.length - b.content.length);
 
     const winner = sorted[0];
@@ -186,9 +185,7 @@ async function slugAssignUntagged(): Promise<void> {
 
 async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> {
   try {
-    const family = vscode.workspace.getConfiguration('hacklm-memory').get<string>('lmFamily', 'gpt-5-mini');
-    const models = await vscode.lm.selectChatModels({ family });
-    const model = models[0];
+    const model = await resolveModel();
     if (!model) { return null; }
 
     const entryList = entries
@@ -204,12 +201,10 @@ async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> 
     ].join('\n');
 
     const messages = [vscode.LanguageModelChatMessage.User(prompt)];
-    const response = await model.sendRequest(messages, {});
-
-    let result = '';
-    for await (const chunk of response.text) {
-      result += chunk;
-    }
+    const result = await sendLmRequest(model, messages, {
+      justification: 'Assigning short topic slugs to untagged memory entries.',
+    });
+    if (!result) { return null; }
 
     // Extract JSON array from response (may be wrapped in markdown code block)
     const jsonMatch = /\[[\s\S]*\]/.exec(result);

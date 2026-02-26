@@ -8,10 +8,11 @@ const CATEGORY_WEIGHT: Record<string, number> = {
   'Preference': 10,
 };
 
+const MAX_SPECIFICITY_SCORE = 15;
+
 export interface ScoredEntry {
   entry: MemoryEntry;
   score: number;
-  breakdown: { category: number; brevity: number; specificity: number };
 }
 
 export function scoreEntry(entry: MemoryEntry): ScoredEntry {
@@ -31,7 +32,6 @@ export function scoreEntry(entry: MemoryEntry): ScoredEntry {
   return {
     entry,
     score: totalScore,
-    breakdown: { category: categoryScore, brevity: brevityScore, specificity: specificityScore },
   };
 }
 
@@ -52,5 +52,5 @@ function measureSpecificity(text: string): number {
   if (/\d+\.\d+/.test(text)) { score += 2; }
   if (/\b[A-Z_]{3,}\b/.test(text)) { score += 2; }
   if (/[a-z][A-Z]/.test(text)) { score += 2; }
-  return Math.min(score, 15);
+  return Math.min(score, MAX_SPECIFICITY_SCORE);
 }

@@ -142,6 +142,12 @@
         "category": "HackLM Memory",
         "title": "Open Memory Entry",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "hacklm-memory.reviewSession",
+        "category": "HackLM Memory",
+        "title": "Review Session for Memory Gaps",
+        "icon": "$(search-fuzzy)"
       }
     ],
     "views": {
@@ -175,9 +181,14 @@
           "group": "navigation@2"
         },
         {
-          "command": "hacklm-memory.panel",
+          "command": "hacklm-memory.reviewSession",
           "when": "view == hacklm-memory.memoriesView",
           "group": "navigation@3"
+        },
+        {
+          "command": "hacklm-memory.panel",
+          "when": "view == hacklm-memory.memoriesView",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [

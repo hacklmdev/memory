@@ -69,7 +69,6 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeNod
 
   async getChildren(element?: MemoryTreeNode): Promise<MemoryTreeNode[]> {
     if (!element) {
-      // Root — one node per category
       const entries = await readAllMemories();
       const countByCategory = new Map<string, number>();
       for (const e of entries) {

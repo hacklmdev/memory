@@ -12,6 +12,8 @@ import {
 import { checkDuplicate } from '../storage/dedup';
 import { findWeakest } from '../storage/scoring';
 import { getEffectiveLimit } from '../utils';
+import { resolveModel, sendLmRequest } from '../lm';
+import { triggerGapAnalysis } from './sessionReview';
 
 const LLM_REDUNDANCY_TIMEOUT_MS = 5000;
 const MAX_ENTRIES_PER_FILE_FOR_LLM = 20;
@@ -74,7 +76,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
 
       // LLM check — 5s timeout, fails open
       if (!slug) {
-        const llmVerdict = await this.llmRedundancyCheck(content, allEntries);
+        const llmVerdict = await this.llmRedundancyCheck(content, allEntries, _token);
         if (llmVerdict) {
           return this.textResult(
             `Already covered by existing entry in ${llmVerdict.file}: "${llmVerdict.content}"`
@@ -120,6 +122,12 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
 
       await this.tickCleanupCounter();
 
+      void triggerGapAnalysis(
+        { category, content, slug },
+        allEntries,
+        this.context
+      );
+
       const updateNote =
         dedupResult.action === 'update'
           ? ` (replaced: "${dedupResult.matchedEntry?.content}")`
@@ -143,7 +151,8 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
   // Fails open: timeout / errors → null (proceed with write).
   private async llmRedundancyCheck(
     newContent: string,
-    allEntries: MemoryEntry[]
+    allEntries: MemoryEntry[],
+    token: vscode.CancellationToken
   ): Promise<{ file: string; content: string } | null> {
     try {
       const grouped = this.groupEntriesForPrompt(allEntries);
@@ -164,23 +173,16 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
         'NEW',
       ].join('\n');
 
-      const family = vscode.workspace.getConfiguration('hacklm-memory').get<string>('lmFamily', 'gpt-5-mini');
-      const models = await vscode.lm.selectChatModels({ family });
-      const model = models[0];
+      const model = await resolveModel();
       if (!model) { return null; }
 
       const messages = [vscode.LanguageModelChatMessage.User(prompt)];
-      const response = await Promise.race([
-        model.sendRequest(messages, {}),
-        new Promise<null>((resolve) => setTimeout(() => resolve(null), LLM_REDUNDANCY_TIMEOUT_MS)),
-      ]);
-
-      if (!response || !('text' in response)) { return null; }
-
-      let result = '';
-      for await (const chunk of response.text) {
-        result += chunk;
-      }
+      const result = await sendLmRequest(model, messages, {
+        justification: 'Checking whether this memory entry is already covered by an existing one.',
+        token,
+        timeoutMs: LLM_REDUNDANCY_TIMEOUT_MS,
+      });
+      if (!result) { return null; }
 
       const match = /^COVERED:([^:]+):(.+)$/.exec(result.trim());
       if (match) {

@@ -16,8 +16,10 @@ const STOP_WORDS = new Set([
   'them', 'their', 'use', 'used', 'using', 'always', 'never',
 ]);
 
+const SKIP_THRESHOLD = 0.8;
+const UPDATE_THRESHOLD = 0.6;
+
 export interface DedupResult {
-  isDuplicate: boolean;
   similarity: number;
   matchedEntry?: MemoryEntry;
   action: 'store' | 'skip' | 'update';
@@ -72,7 +74,7 @@ export function checkDuplicate(
     const entryNorm = normalize(entry.content);
 
     if (newNorm === entryNorm) {
-      return { isDuplicate: true, similarity: 1.0, matchedEntry: entry, action: 'skip' };
+      return { similarity: 1.0, matchedEntry: entry, action: 'skip' };
     }
 
     const entryKeywords = extractKeywords(entry.content);
@@ -84,15 +86,15 @@ export function checkDuplicate(
     }
   }
 
-  if (bestSimilarity >= 0.8) {
-    return { isDuplicate: true, similarity: bestSimilarity, matchedEntry: bestMatch, action: 'skip' };
+  if (bestSimilarity >= SKIP_THRESHOLD) {
+    return { similarity: bestSimilarity, matchedEntry: bestMatch, action: 'skip' };
   }
 
-  if (bestSimilarity >= 0.6) {
-    return { isDuplicate: false, similarity: bestSimilarity, matchedEntry: bestMatch, action: 'update' };
+  if (bestSimilarity >= UPDATE_THRESHOLD) {
+    return { similarity: bestSimilarity, matchedEntry: bestMatch, action: 'update' };
   }
 
-  return { isDuplicate: false, similarity: bestSimilarity, matchedEntry: bestMatch, action: 'store' };
+  return { similarity: bestSimilarity, matchedEntry: bestMatch, action: 'store' };
 }
 
 export function findSimilarClusters(

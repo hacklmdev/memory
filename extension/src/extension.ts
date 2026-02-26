@@ -9,6 +9,7 @@ import { runCleanup } from './tools/cleanupMemory';
 import { TOOL_IDS } from './toolIds';
 import { MemoryTreeProvider, revealEntry } from './memoryTreeView';
 import { getOutputChannel, disposeOutputChannel } from './outputChannel';
+import { runSessionReview } from './tools/sessionReview';
 
 const FIRST_ACTIVATION_KEY = 'hacklm-memory.firstActivation';
 
@@ -30,7 +31,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const statusBar = createStatusBar(context);
   context.subscriptions.push(statusBar);
 
-  // Tree view
   const treeProvider = new MemoryTreeProvider();
   const treeView = vscode.window.createTreeView('hacklm-memory.memoriesView', {
     treeDataProvider: treeProvider,
@@ -44,6 +44,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('hacklm-memory.list', showMemoryList),
     vscode.commands.registerCommand('hacklm-memory.refresh', () => treeProvider.refresh()),
     vscode.commands.registerCommand('hacklm-memory.revealEntry', revealEntry),
+    vscode.commands.registerCommand('hacklm-memory.reviewSession', runSessionReview),
     vscode.commands.registerCommand('hacklm-memory.delete', async () => {
       await deleteMemoryInteractive();
       await updateStatusBar();
@@ -81,6 +82,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   memoryWatcher.onDidCreate(onMemoryChange);
   memoryWatcher.onDidDelete(onMemoryChange);
   context.subscriptions.push(memoryWatcher);
+
+  context.subscriptions.push(
+    vscode.lm.onDidChangeChatModels(() => updateStatusBar())
+  );
 
   const isFirstActivation = !context.globalState.get(FIRST_ACTIVATION_KEY);
   if (isFirstActivation) {
