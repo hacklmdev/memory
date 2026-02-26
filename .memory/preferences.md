@@ -19,3 +19,5 @@ Memories stored by HackLM Memory.
 - [status-bar-item-id] Use createStatusBarItem(id, alignment, priority) overload. Always provide a stable string id — required since VS Code 1.57.
 
 - [void-cast-fire-forget] Fire-and-forget promises in extension code use void-cast (void somePromise.then(...)). Avoids floating promise lint warnings and makes intent explicit.
+
+- [dedup-thresholds] Similarity thresholds in dedup.ts are named constants: SKIP_THRESHOLD=0.8, UPDATE_THRESHOLD=0.6. Never inline them.
