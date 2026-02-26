@@ -20,15 +20,23 @@ import { resolveModel, sendLmRequest } from '../lm';
 const MAX_CONFLICTS_LOG_LINES = 50;
 
 export async function runCleanup(): Promise<string> {
+  const actions: string[] = [];
+
+  // Normalize user-typed lines before reading entries — runs first so slug
+  // assignment and dedup operate on already-clean data.
+  await normalizeRawLines(actions);
+
   const allEntries = await readAllMemories();
 
   if (allEntries.length === 0) {
     return 'Memory is empty — nothing to clean up.';
   }
 
-  const actions: string[] = [];
   let mergedCount = 0;
   let prunedCount = 0;
+
+  await sanitizeEntryContent(allEntries, actions);
+  await pruneStaleEntries(allEntries, actions);
 
   const clusters = findSimilarClusters(allEntries, 0.3);
 
@@ -120,6 +128,82 @@ async function writeCleanupLog(actions: string[]): Promise<void> {
     await fs.appendFile(logPath, entry, 'utf-8');
   } catch {
     // Non-fatal — cleanup still succeeded
+  }
+}
+
+/**
+ * Convert user-typed freeform lines into proper bullet entries.
+ * Handles: plain text, asterisk bullets, slugless dashes.
+ * Skips: blank lines, # headers, existing `- ` bullets, file boilerplate.
+ */
+async function normalizeRawLines(actions: string[]): Promise<void> {
+  const memDir = getMemoryDir();
+  for (const [, filename] of Object.entries(CATEGORY_FILES)) {
+    const filePath = path.join(memDir, filename);
+    try {
+      const text = await fs.readFile(filePath, 'utf-8');
+      const lines = text.split('\n');
+      let changed = false;
+
+      const normalized = lines.map(line => {
+        const trimmed = line.trim();
+        if (
+          trimmed === '' ||
+          trimmed.startsWith('#') ||
+          trimmed.startsWith('- ') ||
+          /^Memories stored by/i.test(trimmed)
+        ) { return line; }
+
+        // Asterisk bullet → dash bullet
+        if (/^\*\s+/.test(trimmed)) {
+          changed = true;
+          return `- ${trimmed.replace(/^\*\s+/, '').trim()}`;
+        }
+
+        // Plain text → bullet (slugAssignUntagged will add a slug on next pass)
+        changed = true;
+        return `- ${trimmed}`;
+      });
+
+      if (changed) {
+        await fs.writeFile(filePath, normalized.join('\n'), 'utf-8');
+        actions.push(`Normalized raw lines in ${filename}`);
+      }
+    } catch {
+      // file missing — skip
+    }
+  }
+}
+
+/** Strip [[double-bracket]] artifacts that the LM occasionally injects into content. */
+async function sanitizeEntryContent(entries: MemoryEntry[], actions: string[]): Promise<void> {
+  const DOUBLE_BRACKET = /\[\[[^\]]+\]\]\s*/g;
+  for (const entry of entries) {
+    if (!DOUBLE_BRACKET.test(entry.content)) { continue; }
+    DOUBLE_BRACKET.lastIndex = 0;
+    const cleaned = entry.content.replace(DOUBLE_BRACKET, '').trim();
+    if (!cleaned || cleaned === entry.content) { continue; }
+    const deleted = await deleteMemory(entry.category, entry.content, entry.slug);
+    if (deleted) {
+      if (entry.slug) {
+        await upsertMemory(entry.category, entry.slug, cleaned);
+      } else {
+        await appendMemory(entry.category, cleaned);
+      }
+      actions.push(`Sanitized [${entry.slug ?? entry.category}]: removed double-bracket artifact`);
+    }
+  }
+}
+
+/** Remove known stale status/changelog slugs left by older builds. */
+async function pruneStaleEntries(entries: MemoryEntry[], actions: string[]): Promise<void> {
+  const STALE_SLUGS = new Set(['last-cleanup', 'last-session-debrief']);
+  for (const entry of entries) {
+    if (!entry.slug || !STALE_SLUGS.has(entry.slug)) { continue; }
+    const deleted = await deleteMemory(entry.category, entry.content, entry.slug);
+    if (deleted) {
+      actions.push(`Removed stale entry [${entry.slug}]`);
+    }
   }
 }
 
