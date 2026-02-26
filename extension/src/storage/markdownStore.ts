@@ -185,12 +185,10 @@ export async function readCategoryMemories(category: string): Promise<MemoryEntr
 }
 
 export async function readAllMemories(): Promise<MemoryEntry[]> {
-  const all: MemoryEntry[] = [];
-  for (const category of Object.keys(CATEGORY_FILES)) {
-    const entries = await readCategoryMemories(category);
-    all.push(...entries);
-  }
-  return all;
+  const results = await Promise.all(
+    Object.keys(CATEGORY_FILES).map(category => readCategoryMemories(category))
+  );
+  return results.flat();
 }
 
 function parseMemoryFile(text: string, category: string, file: string): MemoryEntry[] {
@@ -242,8 +240,18 @@ export async function deleteMemory(
 
 export async function getMemoryCount(): Promise<number> {
   try {
-    const entries = await readAllMemories();
-    return entries.length;
+    const memDir = getMemoryDir();
+    const counts = await Promise.all(
+      Object.values(CATEGORY_FILES).map(async filename => {
+        try {
+          const text = await fs.readFile(path.join(memDir, filename), 'utf-8');
+          return (text.match(/^- /gm) ?? []).length;
+        } catch {
+          return 0;
+        }
+      })
+    );
+    return counts.reduce((a, b) => a + b, 0);
   } catch {
     return 0;
   }

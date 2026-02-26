@@ -12,7 +12,7 @@ export function createStatusBar(context: vscode.ExtensionContext): vscode.Status
 
   statusBarItem.command = 'hacklm-memory.panel';
   statusBarItem.tooltip = 'HackLM Memory — click to open control panel';
-  statusBarItem.text = '$(brain) Memory';
+  statusBarItem.text = '$(bookmark) Memory';
   statusBarItem.show();
 
   updateStatusBar();
@@ -25,8 +25,8 @@ export async function updateStatusBar(): Promise<void> {
 
   try {
     const count = await getMemoryCount();
-    statusBarItem.text = `$(brain) Memory (${count})`;
+    statusBarItem.text = `$(bookmark) Memory (${count})`;
   } catch {
-    statusBarItem.text = '$(brain) Memory';
+    statusBarItem.text = '$(bookmark) Memory';
   }
 }
