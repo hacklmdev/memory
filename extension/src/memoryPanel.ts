@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getMemoryCount } from './storage/markdownStore';
 import { runCleanup } from './tools/cleanupMemory';
+import { getOutputChannel } from './outputChannel';
 
 interface PanelAction {
   label: string;
@@ -75,9 +76,9 @@ async function runCleanupInteractive(): Promise<void> {
       async () => {
         const report = await runCleanup(dryRun.value);
 
-        const outputChannel = vscode.window.createOutputChannel('HackLM Memory Cleanup');
-        outputChannel.appendLine(report);
-        outputChannel.show();
+        const channel = getOutputChannel();
+        channel.appendLine(report);
+        channel.show(true);
 
         const firstLine = report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
         vscode.window.showInformationMessage(firstLine);
@@ -114,14 +115,15 @@ async function showSettings(): Promise<void> {
             value: String(config.get('lmFamily', 'gpt-5-mini')),
           });
           if (family) {
-            await config.update('lmFamily', family, vscode.ConfigurationTarget.Workspace);
+            await config.update('lmFamily', family, vscode.ConfigurationTarget.Global);
             vscode.window.showInformationMessage(`Language model set to "${family}".`);
           }
           return;
         }
 
+        const ENTER_MANUALLY = '$(edit) Enter manually…';
         availableModels.push({
-          label: '$(edit) Enter manually…',
+          label: ENTER_MANUALLY,
           description: 'Type a custom model family name',
         });
 
@@ -133,7 +135,7 @@ async function showSettings(): Promise<void> {
 
         let family: string | undefined = selected.label;
 
-        if (family === '$(edit) Enter manually…') {
+        if (family === ENTER_MANUALLY) {
           family = await vscode.window.showInputBox({
             prompt: 'Enter the language model family to use',
             value: String(config.get('lmFamily', 'gpt-5-mini')),
@@ -141,7 +143,7 @@ async function showSettings(): Promise<void> {
         }
 
         if (family) {
-          await config.update('lmFamily', family, vscode.ConfigurationTarget.Workspace);
+          await config.update('lmFamily', family, vscode.ConfigurationTarget.Global);
           vscode.window.showInformationMessage(`Language model set to "${family}".`);
         }
       },
@@ -159,7 +161,7 @@ async function showSettings(): Promise<void> {
           },
         });
         if (frequency) {
-          await config.update('autoCleanupFrequency', parseInt(frequency), vscode.ConfigurationTarget.Workspace);
+          await config.update('autoCleanupFrequency', parseInt(frequency), vscode.ConfigurationTarget.Global);
           vscode.window.showInformationMessage(`Auto-cleanup set to every ${frequency} store operations.`);
         }
       },
@@ -214,13 +216,12 @@ async function showSettings(): Promise<void> {
 export async function showMemoryStats(): Promise<void> {
   const memoryCount = await getMemoryCount();
 
-  const stats = [
-    { label: '$(database) Total Memories', description: String(memoryCount) },
-    { label: '$(calendar) Last Cleanup', description: 'Check .memory/cleanup.log' },
-    { label: '$(pulse) Memory Health', description: memoryCount > 0 ? 'Active' : 'Empty' },
-  ];
-
-  await vscode.window.showQuickPick(stats, {
-    placeHolder: 'HackLM Memory — Statistics',
-  });
+  const channel = getOutputChannel();
+  channel.clear();
+  channel.appendLine('HackLM Memory — Statistics');
+  channel.appendLine('─'.repeat(40));
+  channel.appendLine(`Total memories : ${memoryCount}`);
+  channel.appendLine(`Memory health  : ${memoryCount > 0 ? 'Active' : 'Empty'}`);
+  channel.appendLine(`Memory files   : .memory/*.md`);
+  channel.show(true);
 }

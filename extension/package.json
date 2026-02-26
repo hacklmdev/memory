@@ -35,7 +35,7 @@
         "toolReferenceName": "storeMemory",
         "displayName": "Store Memory",
         "userDescription": "Save a durable insight about this project for future sessions.",
-        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS call queryMemory first to avoid duplicates. Always provide a slug (kebab-case topic key, e.g. 'console-logs'). Same slug = update, not duplicate. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken).",
+        "modelDescription": "Store a durable insight about this project that would help in future sessions. Only store things that will matter next week. ALWAYS call queryMemory first to avoid duplicates. Always provide a slug (kebab-case topic key, e.g. 'console-logs'). Same slug = update, not duplicate. Categories: Instruction (how to behave), Quirk (project-specific weirdness), Preference (style/design choices), Decision (architectural commitments), Security (rules that must never be broken). After completing any implementation task, call this tool for each new decision, pattern, or convention applied — before ending the turn. Do not wait for the next queryMemory call.",
         "canBeReferencedInPrompt": true,
         "icon": "$(save)",
         "inputSchema": {
@@ -91,87 +91,180 @@
     "commands": [
       {
         "command": "hacklm-memory.panel",
-        "title": "HackLM Memory: Open Control Panel"
+        "category": "HackLM Memory",
+        "title": "Open Control Panel",
+        "icon": "$(menu)"
       },
       {
         "command": "hacklm-memory.stats",
-        "title": "HackLM Memory: View Statistics"
+        "category": "HackLM Memory",
+        "title": "View Statistics",
+        "icon": "$(graph)"
       },
       {
         "command": "hacklm-memory.list",
-        "title": "HackLM Memory: List Memories"
+        "category": "HackLM Memory",
+        "title": "List Memories",
+        "icon": "$(list-unordered)"
       },
       {
         "command": "hacklm-memory.delete",
-        "title": "HackLM Memory: Delete Memory"
+        "category": "HackLM Memory",
+        "title": "Delete Memory",
+        "icon": "$(trash)"
       },
       {
         "command": "hacklm-memory.open",
-        "title": "HackLM Memory: Open Memory Folder"
+        "category": "HackLM Memory",
+        "title": "Open Memory Folder",
+        "icon": "$(folder-opened)"
       },
       {
         "command": "hacklm-memory.reinit",
-        "title": "HackLM Memory: Reinitialize Instruction Files"
+        "category": "HackLM Memory",
+        "title": "Reinitialize Instruction Files",
+        "icon": "$(refresh)"
       },
       {
         "command": "hacklm-memory.cleanup",
-        "title": "HackLM Memory: Run Cleanup"
+        "category": "HackLM Memory",
+        "title": "Run Cleanup",
+        "icon": "$(brush)"
+      },
+      {
+        "command": "hacklm-memory.refresh",
+        "category": "HackLM Memory",
+        "title": "Refresh Memories View",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "hacklm-memory.revealEntry",
+        "category": "HackLM Memory",
+        "title": "Open Memory Entry",
+        "icon": "$(go-to-file)"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "hacklm-memory.memoriesView",
+          "name": "Memories",
+          "contextualTitle": "HackLM Memory",
+          "when": "workspaceFolderCount > 0",
+          "visibility": "collapsed"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "hacklm-memory.memoriesView",
+        "contents": "No memories stored yet.\n\nCopilot will save insights here as you chat. You can also open the control panel to manage memories manually.\n\n[Open Control Panel](command:hacklm-memory.panel)",
+        "when": "workspaceFolderCount > 0"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "hacklm-memory.refresh",
+          "when": "view == hacklm-memory.memoriesView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "hacklm-memory.cleanup",
+          "when": "view == hacklm-memory.memoriesView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "hacklm-memory.panel",
+          "when": "view == hacklm-memory.memoriesView",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "hacklm-memory.delete",
+          "when": "view == hacklm-memory.memoriesView && viewItem == memoryEntry",
+          "group": "inline"
+        },
+        {
+          "command": "hacklm-memory.revealEntry",
+          "when": "view == hacklm-memory.memoriesView && viewItem == memoryEntry",
+          "group": "navigation@1"
+        },
+        {
+          "command": "hacklm-memory.delete",
+          "when": "view == hacklm-memory.memoriesView && viewItem == memoryEntry",
+          "group": "navigation@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "hacklm-memory.refresh",
+          "when": "false"
+        },
+        {
+          "command": "hacklm-memory.revealEntry",
+          "when": "false"
+        }
+      ]
+    },
     "configuration": {
       "title": "HackLM Memory",
       "properties": {
         "hacklm-memory.lmFamily": {
           "type": "string",
           "default": "gpt-5-mini",
-          "description": "Language model family to use for LLM-assisted operations (e.g. 'gpt-5-mini', 'gpt-4o', 'claude-sonnet')"
+          "scope": "application",
+          "markdownDescription": "Language model family for LLM-assisted operations (e.g. `gpt-5-mini`, `gpt-4o`, `claude-sonnet`)."
         },
         "hacklm-memory.autoCleanupFrequency": {
           "type": "number",
           "default": 10,
           "minimum": 1,
           "maximum": 100,
-          "description": "Run cleanup automatically after this many store_memory calls"
+          "scope": "application",
+          "markdownDescription": "Run automatic cleanup after this many `storeMemory` calls."
         },
         "hacklm-memory.categoryLimit.Instruction": {
           "type": "number",
           "default": 10,
           "minimum": 1,
           "maximum": 50,
-          "description": "Max memories to keep in Instruction category"
+          "markdownDescription": "Max entries to keep in the `Instruction` category."
         },
         "hacklm-memory.categoryLimit.Quirk": {
           "type": "number",
           "default": 20,
           "minimum": 1,
           "maximum": 50,
-          "description": "Max memories to keep in Quirk category"
+          "markdownDescription": "Max entries to keep in the `Quirk` category."
         },
         "hacklm-memory.categoryLimit.Preference": {
           "type": "number",
           "default": 20,
           "minimum": 1,
           "maximum": 50,
-          "description": "Max memories to keep in Preference category"
+          "markdownDescription": "Max entries to keep in the `Preference` category."
         },
         "hacklm-memory.categoryLimit.Decision": {
           "type": "number",
           "default": 15,
           "minimum": 1,
           "maximum": 50,
-          "description": "Max memories to keep in Decision category"
+          "markdownDescription": "Max entries to keep in the `Decision` category."
         },
         "hacklm-memory.categoryLimit.Security": {
           "type": "number",
           "default": 15,
           "minimum": 1,
           "maximum": 50,
-          "description": "Max memories to keep in Security category"
+          "markdownDescription": "Max entries to keep in the `Security` category."
         },
         "hacklm-memory.autoApproveStore": {
           "type": "boolean",
           "default": false,
-          "description": "Skip the confirmation prompt when saving to memory (storeMemory). Enable only if you trust the agent's judgment."
+          "scope": "application",
+          "markdownDescription": "Skip the confirmation prompt when saving to memory (`storeMemory`). Enable only if you trust the agent's judgment."
         }
       }
     }

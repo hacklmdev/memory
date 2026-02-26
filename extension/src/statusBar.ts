@@ -5,6 +5,7 @@ let statusBarItem: vscode.StatusBarItem;
 
 export function createStatusBar(context: vscode.ExtensionContext): vscode.StatusBarItem {
   statusBarItem = vscode.window.createStatusBarItem(
+    'hacklm-memory.statusBar',
     vscode.StatusBarAlignment.Left,
     100
   );

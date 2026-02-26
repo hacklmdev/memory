@@ -7,6 +7,8 @@ import { StoreMemoryTool } from './tools/storeMemory';
 import { QueryMemoryTool } from './tools/queryMemory';
 import { runCleanup } from './tools/cleanupMemory';
 import { TOOL_IDS } from './toolIds';
+import { MemoryTreeProvider, revealEntry } from './memoryTreeView';
+import { getOutputChannel, disposeOutputChannel } from './outputChannel';
 
 const FIRST_ACTIVATION_KEY = 'hacklm-memory.firstActivation';
 
@@ -28,13 +30,24 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const statusBar = createStatusBar(context);
   context.subscriptions.push(statusBar);
 
+  // Tree view
+  const treeProvider = new MemoryTreeProvider();
+  const treeView = vscode.window.createTreeView('hacklm-memory.memoriesView', {
+    treeDataProvider: treeProvider,
+    showCollapseAll: true,
+  });
+  context.subscriptions.push(treeView);
+
   context.subscriptions.push(
     vscode.commands.registerCommand('hacklm-memory.panel', showMemoryPanel),
     vscode.commands.registerCommand('hacklm-memory.stats', showMemoryStats),
     vscode.commands.registerCommand('hacklm-memory.list', showMemoryList),
+    vscode.commands.registerCommand('hacklm-memory.refresh', () => treeProvider.refresh()),
+    vscode.commands.registerCommand('hacklm-memory.revealEntry', revealEntry),
     vscode.commands.registerCommand('hacklm-memory.delete', async () => {
       await deleteMemoryInteractive();
       await updateStatusBar();
+      treeProvider.refresh();
     }),
     vscode.commands.registerCommand('hacklm-memory.open', openMemoryFolder),
     vscode.commands.registerCommand('hacklm-memory.reinit', async () => {
@@ -47,10 +60,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           { location: vscode.ProgressLocation.Notification, title: 'Running memory cleanup...', cancellable: false },
           async () => {
             const report = await runCleanup(false);
-            const outputChannel = vscode.window.createOutputChannel('HackLM Memory Cleanup');
-            outputChannel.appendLine(report);
-            outputChannel.show();
-            const firstLine = report.split('\n')[0];
+            const channel = getOutputChannel();
+            channel.appendLine(report);
+            channel.show(true);
+            const firstLine = report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
             vscode.window.showInformationMessage(firstLine);
           }
         );
@@ -63,24 +76,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const memoryWatcher = vscode.workspace.createFileSystemWatcher(
     new vscode.RelativePattern(workspaceFolder, '.memory/**/*.md')
   );
-  memoryWatcher.onDidChange(() => updateStatusBar());
-  memoryWatcher.onDidCreate(() => updateStatusBar());
-  memoryWatcher.onDidDelete(() => updateStatusBar());
+  const onMemoryChange = () => { updateStatusBar(); treeProvider.refresh(); };
+  memoryWatcher.onDidChange(onMemoryChange);
+  memoryWatcher.onDidCreate(onMemoryChange);
+  memoryWatcher.onDidDelete(onMemoryChange);
   context.subscriptions.push(memoryWatcher);
 
   const isFirstActivation = !context.globalState.get(FIRST_ACTIVATION_KEY);
   if (isFirstActivation) {
     await context.globalState.update(FIRST_ACTIVATION_KEY, true);
-    vscode.window.showInformationMessage(
+    void vscode.window.showInformationMessage(
       'HackLM Memory is active! I\'ll learn your preferences as we chat.',
       'List Memories'
     ).then(action => {
       if (action === 'List Memories') {
-        vscode.commands.executeCommand('hacklm-memory.list');
+        void vscode.commands.executeCommand('hacklm-memory.list');
       }
     });
   }
 
 }
 
-export function deactivate(): void {}
+export function deactivate(): void {
+  disposeOutputChannel();
+}
