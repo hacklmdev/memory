@@ -121,6 +121,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
       }
 
       await this.tickCleanupCounter();
+      void vscode.commands.executeCommand('setContext', 'hacklm-memory.hasStoredMemory', true);
 
       void triggerGapAnalysis(
         { category, content, slug },

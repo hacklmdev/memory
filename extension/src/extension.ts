@@ -71,6 +71,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } catch (err) {
         vscode.window.showErrorMessage(`Cleanup failed: ${err}`);
       }
+    }),
+    vscode.commands.registerCommand('hacklm-memory.openWalkthrough', async () => {
+      await vscode.commands.executeCommand('setContext', 'hacklm-memory.walkthroughStarted', true);
+      await vscode.commands.executeCommand(
+        'workbench.action.openWalkthrough',
+        { category: 'hacklm.hacklm-memory#hacklm-memory.gettingStarted' }
+      );
     })
   );
 
@@ -90,14 +97,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const isFirstActivation = !context.globalState.get(FIRST_ACTIVATION_KEY);
   if (isFirstActivation) {
     await context.globalState.update(FIRST_ACTIVATION_KEY, true);
-    void vscode.window.showInformationMessage(
-      'HackLM Memory is active! I\'ll learn your preferences as we chat.',
-      'List Memories'
-    ).then(action => {
-      if (action === 'List Memories') {
-        void vscode.commands.executeCommand('hacklm-memory.list');
-      }
-    });
+    await vscode.commands.executeCommand('hacklm-memory.openWalkthrough');
   }
 
 }

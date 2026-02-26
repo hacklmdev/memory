@@ -148,6 +148,12 @@
         "category": "HackLM Memory",
         "title": "Review Session for Memory Gaps",
         "icon": "$(search-fuzzy)"
+      },
+      {
+        "command": "hacklm-memory.openWalkthrough",
+        "category": "HackLM Memory",
+        "title": "Open Getting Started",
+        "icon": "$(book)"
       }
     ],
     "views": {
@@ -219,6 +225,50 @@
         }
       ]
     },
+    "walkthroughs": [
+      {
+        "id": "hacklm-memory.gettingStarted",
+        "title": "Get started with HackLM Memory",
+        "description": "Set up persistent memory for Copilot — takes about 2 minutes.",
+        "steps": [
+          {
+            "id": "welcome",
+            "title": "How it works",
+            "description": "HackLM Memory gives Copilot a persistent memory layer across sessions. Your project's conventions, decisions, and preferences are stored in `.memory/` and injected on every new chat.",
+            "media": { "markdown": "media/welcome.md" },
+            "completionEvents": ["onContext:hacklm-memory.walkthroughStarted"]
+          },
+          {
+            "id": "open-view",
+            "title": "Open the Memories view",
+            "description": "Find stored memories in the Explorer sidebar.\n[Open Memories View](command:hacklm-memory.memoriesView.focus)",
+            "media": { "markdown": "media/open-view.md" },
+            "completionEvents": ["onView:hacklm-memory.memoriesView"]
+          },
+          {
+            "id": "chat-store",
+            "title": "Store your first memory",
+            "description": "Open Copilot Chat and tell it something worth remembering. It will call `storeMemory` automatically.\n[Open Copilot Chat](command:workbench.action.chat.open)",
+            "media": { "markdown": "media/chat-store.md" },
+            "completionEvents": ["onContext:hacklm-memory.hasStoredMemory"]
+          },
+          {
+            "id": "configure-lm",
+            "title": "Configure your language model",
+            "description": "Choose which Copilot model powers deduplication and gap analysis. Skip if `gpt-5-mini` works for you.\n[Open Control Panel](command:hacklm-memory.panel)",
+            "media": { "markdown": "media/configure-lm.md" },
+            "completionEvents": ["onSettingChanged:hacklm-memory.lmFamily"]
+          },
+          {
+            "id": "done",
+            "title": "You're set up",
+            "description": "HackLM Memory is active. Open the control panel any time to browse, clean, or review your memories.\n[Open Control Panel](command:hacklm-memory.panel)",
+            "media": { "markdown": "media/done.md" },
+            "completionEvents": ["onCommand:hacklm-memory.panel"]
+          }
+        ]
+      }
+    ],
     "configuration": {
       "title": "HackLM Memory",
       "properties": {
