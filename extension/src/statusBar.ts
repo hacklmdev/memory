@@ -12,6 +12,7 @@ export function createStatusBar(context: vscode.ExtensionContext): vscode.Status
 
   statusBarItem.command = 'hacklm-memory.panel';
   statusBarItem.tooltip = 'HackLM Memory — click to open control panel';
+  statusBarItem.text = '$(brain) Memory';
   statusBarItem.show();
 
   updateStatusBar();

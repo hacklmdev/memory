@@ -19,7 +19,7 @@ import { resolveModel, sendLmRequest } from '../lm';
 
 const MAX_CONFLICTS_LOG_LINES = 50;
 
-export async function runCleanup(dryRun: boolean): Promise<string> {
+export async function runCleanup(): Promise<string> {
   const allEntries = await readAllMemories();
 
   if (allEntries.length === 0) {
@@ -29,15 +29,6 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
   const actions: string[] = [];
   let mergedCount = 0;
   let prunedCount = 0;
-
-  /**
-   * Keys of entries that would be deleted in a dry run.
-   * Used to give the prune step an accurate post-merge view of each
-   * category without actually writing to disk.
-   */
-  const virtuallyDeleted = new Set<string>();
-  const entryKey = (e: { category: string; content: string }) =>
-    `${e.category}\0${e.content}`;
 
   const clusters = findSimilarClusters(allEntries, 0.5);
 
@@ -64,22 +55,12 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
       mergedContent = `${winner.content} (also: ${extraInfo.join(', ')})`;
     }
 
-    if (!dryRun) {
-      for (const loser of losers) {
-        await deleteMemory(loser.category, loser.content, loser.slug);
-      }
-      if (mergedContent !== winner.content) {
-        await deleteMemory(winner.category, winner.content, winner.slug);
-        await appendMemory(winner.category, mergedContent);
-      }
-    } else {
-      // Only losers are truly removed; the winner survives (possibly with updated
-      // content) so it must NOT be placed in virtuallyDeleted — doing so would
-      // make the prune step see one fewer entry than will really exist, causing
-      // it to miss prune candidates that the real run would catch.
-      for (const loser of losers) {
-        virtuallyDeleted.add(entryKey(loser));
-      }
+    for (const loser of losers) {
+      await deleteMemory(loser.category, loser.content, loser.slug);
+    }
+    if (mergedContent !== winner.content) {
+      await deleteMemory(winner.category, winner.content, winner.slug);
+      await appendMemory(winner.category, mergedContent);
     }
 
     mergedCount += losers.length;
@@ -88,20 +69,14 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
 
   for (const category of Object.keys(CATEGORY_FILES)) {
     const limit = getEffectiveLimit(category);
-    const raw = await readCategoryMemories(category);
-    // In dry-run mode, exclude entries that would already be gone after merges
-    const categoryEntries = dryRun
-      ? raw.filter(e => !virtuallyDeleted.has(entryKey(e)))
-      : raw;
+    const categoryEntries = await readCategoryMemories(category);
     if (categoryEntries.length <= limit) { continue; }
 
     const scored = scoreAllEntries(categoryEntries);
     const toRemove = scored.slice(limit);
 
     for (const item of toRemove) {
-      if (!dryRun) {
-        await deleteMemory(item.entry.category, item.entry.content, item.entry.slug);
-      }
+      await deleteMemory(item.entry.category, item.entry.content, item.entry.slug);
       prunedCount++;
       actions.push(
         `Pruned [${category}] (score ${item.score}): "${item.entry.content.substring(0, 50)}…"`
@@ -109,29 +84,27 @@ export async function runCleanup(dryRun: boolean): Promise<string> {
     }
   }
 
-  if (!dryRun) {
-    await migrateFiles();
-    await slugAssignUntagged();
-    await pruneConflictsLog();
-  }
+  await migrateFiles();
+  await slugAssignUntagged();
+  await pruneConflictsLog();
 
-  if (!dryRun && actions.length > 0) {
+  if (actions.length > 0) {
     await writeCleanupLog(actions);
     await writeCleanupDebrief(mergedCount, prunedCount);
   }
 
-  const prefix = dryRun ? 'DRY RUN — no changes made\n\n' : '';
-  const finalEntries = dryRun ? allEntries : await readAllMemories();
+  const finalEntries = await readAllMemories();
 
   if (actions.length === 0) {
-    return `${prefix}Memory is already clean! ${allEntries.length} entries across ${Object.keys(CATEGORY_FILES).length} categories.`;
+    return `Memory is already clean! ${allEntries.length} entries across ${Object.keys(CATEGORY_FILES).length} categories.`;
   }
 
   return [
-    `${prefix}Cleanup Report`,
+    `Cleanup Report`,
     ``,
     `Before: ${allEntries.length} entries`,
-    `After:  ${dryRun ? allEntries.length - mergedCount - prunedCount : finalEntries.length} entries`,
+    `After:  ${finalEntries.length} entries`,
+
     `Merged: ${mergedCount} duplicates`,
     `Pruned: ${prunedCount} low-scoring`,
     `Actions:`,

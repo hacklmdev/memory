@@ -60,7 +60,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         await vscode.window.withProgress(
           { location: vscode.ProgressLocation.Notification, title: 'Running memory cleanup...', cancellable: false },
           async () => {
-            const report = await runCleanup(false);
+            const report = await runCleanup();
             const channel = getOutputChannel();
             channel.appendLine(report);
             channel.show(true);

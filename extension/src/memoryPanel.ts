@@ -24,7 +24,7 @@ export async function showMemoryPanel(): Promise<void> {
       action: async () => { await vscode.commands.executeCommand('hacklm-memory.delete'); },
     },
     {
-      label: '$(brush) Run Cleanup',
+      label: '$(play) Run Cleanup',
       description: 'Merge duplicates, prune stale entries',
       action: async () => { await runCleanupInteractive(); },
     },
@@ -56,16 +56,6 @@ export async function showMemoryPanel(): Promise<void> {
 }
 
 async function runCleanupInteractive(): Promise<void> {
-  const dryRun = await vscode.window.showQuickPick(
-    [
-      { label: '$(play) Run Cleanup Now', value: false },
-      { label: '$(eye) Preview Changes (Dry Run)', value: true },
-    ],
-    { placeHolder: 'Cleanup mode' }
-  );
-
-  if (!dryRun) { return; }
-
   try {
     await vscode.window.withProgress(
       {
@@ -74,7 +64,7 @@ async function runCleanupInteractive(): Promise<void> {
         cancellable: false,
       },
       async () => {
-        const report = await runCleanup(dryRun.value);
+        const report = await runCleanup();
 
         const channel = getOutputChannel();
         channel.appendLine(report);
