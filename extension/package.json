@@ -64,7 +64,7 @@
         "toolReferenceName": "queryMemory",
         "displayName": "Query Memory",
         "userDescription": "Search stored memories for relevant principles, preferences, and decisions.",
-        "modelDescription": "Search stored memories for relevant principles, preferences, best practices, and decisions. Call this before answering questions about architecture, conventions, style, or any topic where prior context would help. Returns the most relevant entries ranked by keyword match and recency.",
+        "modelDescription": "Search stored memories for relevant principles, preferences, best practices, and decisions. Call this before answering questions about architecture, conventions, style, or any topic where prior context would help. Returns the most relevant entries ranked by keyword match and recency. After returning results, if your previous response produced project-specific learnings not yet stored, call storeMemory before proceeding.",
         "canBeReferencedInPrompt": true,
         "icon": "$(search)",
         "inputSchema": {
@@ -85,44 +85,6 @@
             }
           },
           "required": ["query"]
-        }
-      },
-      {
-        "name": "hacklm-memory_harvestMemory",
-        "tags": ["memory", "copilot", "hacklm-memory"],
-        "toolReferenceName": "harvestMemory",
-        "displayName": "Harvest Memory",
-        "userDescription": "Automatically capture durable learnings at the end of a chat turn.",
-        "modelDescription": "Call at the end of every response to capture durable learnings from this turn. Provide an array of findings worth persisting across sessions. Skip entirely if you already called storeMemory this turn. Only include things that will matter next week — skip anything session-specific, obvious, or already known.",
-        "canBeReferencedInPrompt": true,
-        "icon": "$(lightbulb)",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "findings": {
-              "type": "array",
-              "description": "Durable learnings to persist from this turn.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "category": {
-                    "type": "string",
-                    "enum": ["Instruction", "Quirk", "Preference", "Decision", "Security"]
-                  },
-                  "content": {
-                    "type": "string",
-                    "description": "Clear, actionable, one-line insight."
-                  },
-                  "slug": {
-                    "type": "string",
-                    "description": "Optional kebab-case topic key. Same slug = update, not duplicate."
-                  }
-                },
-                "required": ["category", "content"]
-              }
-            }
-          },
-          "required": ["findings"]
         }
       }
     ],
@@ -209,7 +171,7 @@
         "hacklm-memory.autoApproveStore": {
           "type": "boolean",
           "default": false,
-          "description": "Skip the confirmation prompt when saving to memory (store_memory). Enable only if you trust the agent's judgment."
+          "description": "Skip the confirmation prompt when saving to memory (storeMemory). Enable only if you trust the agent's judgment."
         }
       }
     }

@@ -109,7 +109,7 @@ export async function upsertMemory(
     try {
       text = await fs.readFile(filePath, 'utf-8');
     } catch {
-      // File doesn't exist — will create it
+      // file will be created by appendFile below
     }
 
     const lines = stripDateHeaders(text).split('\n');
@@ -137,7 +137,7 @@ export async function migrateFiles(): Promise<void> {
         await withFileLock(filePath, () => fs.writeFile(filePath, migrated, 'utf-8'));
       }
     } catch {
-      // File doesn't exist — skip
+      // skip missing files
     }
   }
 }
@@ -146,11 +146,7 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/**
- * Remove any legacy `## YYYY-MM-DD` date headers from file text.
- * Called on every read-modify-write so old-format files are migrated
- * transparently the first time they are touched.
- */
+// Called on every read-modify-write so old-format files migrate transparently.
 function stripDateHeaders(text: string): string {
   return text
     .split('\n')

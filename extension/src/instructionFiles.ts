@@ -21,9 +21,9 @@ Read memory files on-demand — not all at once.
 
 ### Memory Tools
 
-Call \`query_memory\` before answering anything about architecture, conventions, or style.
+Call \`queryMemory\` before answering anything about architecture, conventions, or style.
 
-Call \`store_memory\` (with a kebab-case \`slug\`) when:
+Call \`storeMemory\` (with a kebab-case \`slug\`) when:
 1. User states a preference or rule → store as Instruction or Preference **before** acting
 2. User corrects you → store the correction
 3. A command or build fails → store root cause and fix
@@ -58,7 +58,7 @@ async function upsertManagedSection(
   try {
     content = await fs.readFile(filePath, 'utf-8');
   } catch {
-    // File doesn't exist — will create it
+    // file will be created below
   }
 
   if (content.includes(markerStart) && content.includes(markerEnd)) {

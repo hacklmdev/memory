@@ -119,7 +119,6 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
       }
 
       await this.tickCleanupCounter();
-      await this.context.workspaceState.update('hacklm-memory.lastStoreTurn', Date.now());
 
       const updateNote =
         dedupResult.action === 'update'

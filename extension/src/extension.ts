@@ -5,7 +5,6 @@ import { showMemoryList, deleteMemoryInteractive, openMemoryFolder } from './sto
 import { showMemoryPanel, showMemoryStats } from './memoryPanel';
 import { StoreMemoryTool } from './tools/storeMemory';
 import { QueryMemoryTool } from './tools/queryMemory';
-import { HarvestMemoryTool } from './tools/harvestMemory';
 import { runCleanup } from './tools/cleanupMemory';
 import { TOOL_IDS } from './toolIds';
 
@@ -15,8 +14,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Register LM tools first — must run even without a workspace folder
   context.subscriptions.push(
     vscode.lm.registerTool(TOOL_IDS.STORE_MEMORY, new StoreMemoryTool(context)),
-    vscode.lm.registerTool(TOOL_IDS.QUERY_MEMORY, new QueryMemoryTool()),
-    vscode.lm.registerTool(TOOL_IDS.HARVEST_MEMORY, new HarvestMemoryTool(context))
+    vscode.lm.registerTool(TOOL_IDS.QUERY_MEMORY, new QueryMemoryTool())
   );
 
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
