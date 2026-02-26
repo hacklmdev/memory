@@ -241,7 +241,7 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
     if (count >= frequency) {
       await this.context.globalState.update(key, 0);
       // Run cleanup silently in background — don't block the tool response
-      import('./cleanupMemory').then(m => m.runCleanup(false)).catch(() => {});
+      import('./cleanupMemory').then(m => m.runCleanup()).catch(() => {});
     }
   }
 }

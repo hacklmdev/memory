@@ -24,7 +24,7 @@ export async function showMemoryPanel(): Promise<void> {
       action: async () => { await vscode.commands.executeCommand('hacklm-memory.delete'); },
     },
     {
-      label: '$(play) Run Cleanup',
+      label: '$(run-all) Run Cleanup',
       description: 'Merge duplicates, prune stale entries',
       action: async () => { await runCleanupInteractive(); },
     },
@@ -70,8 +70,8 @@ async function runCleanupInteractive(): Promise<void> {
         channel.appendLine(report);
         channel.show(true);
 
-        const firstLine = report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
-        vscode.window.showInformationMessage(firstLine);
+        const summary = report.split('\n').find(l => /^(Memory is|After:|Merged:|Pruned:)/.test(l.trim())) ?? report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
+        vscode.window.showInformationMessage(summary);
       }
     );
   } catch (err) {

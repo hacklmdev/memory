@@ -64,8 +64,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             const channel = getOutputChannel();
             channel.appendLine(report);
             channel.show(true);
-            const firstLine = report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
-            vscode.window.showInformationMessage(firstLine);
+            const summary = report.split('\n').find(l => /^(Memory is|After:|Merged:|Pruned:)/.test(l.trim())) ?? report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
+            vscode.window.showInformationMessage(summary);
           }
         );
       } catch (err) {
