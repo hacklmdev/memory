@@ -4,10 +4,10 @@
   "description": "Persistent memory layer for VS Code Copilot — learn from interactions, retain insights, improve over time",
   "version": "1.0.0",
   "publisher": "hacklm",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "https://github.com/hacklm/hacklm-memory"
+    "url": "https://github.com/hacklmdev/memory"
   },
   "engines": {
     "vscode": "^1.99.0"
@@ -326,6 +326,12 @@
           "default": false,
           "scope": "application",
           "markdownDescription": "Skip the confirmation prompt when saving to memory (`storeMemory`). Enable only if you trust the agent's judgment."
+        },
+        "hacklm-memory.manageInstructionFile": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "markdownDescription": "Allow HackLM Memory to manage the `<!-- hacklm-memory -->` block in `.github/copilot-instructions.md`. Disable to manage that file yourself."
         }
       }
     }
@@ -334,13 +340,18 @@
     "build": "esbuild src/extension.ts --bundle --platform=node --format=cjs --outfile=dist/extension.js --external:vscode",
     "watch": "npm run build -- --watch",
     "lint": "tsc --noEmit",
-    "package": "npm run build && vsce package"
+    "test": "vitest run",
+    "package": "npm run build && vsce package",
+    "publish:vsce": "vsce publish",
+    "publish:ovsx": "ovsx publish"
   },
   "devDependencies": {
     "@types/vscode": "^1.99.0",
     "@types/node": "^22.0.0",
     "@vscode/vsce": "^3.0.0",
     "esbuild": "^0.25.0",
-    "typescript": "^5.7.0"
+    "ovsx": "^0.9.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
   }
 }

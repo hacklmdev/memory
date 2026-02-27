@@ -2,9 +2,12 @@
   "name": "hacklm-memory-engine",
   "version": "1.0.0",
   "private": true,
+  "license": "GPL-3.0-only",
   "description": "Persistent memory layer for VS Code Copilot",
   "scripts": {
-    "build": "cd extension && npm run build",
+    "build": "npm run build:ext && npm run build:docs",
+    "build:ext": "cd extension && npm run build",
+    "build:docs": "node -e \"const {execSync}=require('child_process');const cmd=process.platform==='win32'?'.\\\\.venv\\\\Scripts\\\\zensical build':'./.venv/bin/zensical build';execSync(cmd,{stdio:'inherit'});\"",
     "watch": "cd extension && npm run watch",
     "package": "cd extension && npm run package"
   }
