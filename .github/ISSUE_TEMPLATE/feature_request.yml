@@ -1,0 +1,54 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, check the [roadmap](../../docs/roadmap.md) to see if this is already planned.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What problem are you trying to solve? Why does the current behavior fall short?
+      placeholder: "When I work on a large project, queryMemory returns too many results and I can't find what I need..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe what you'd like to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches did you consider? Why did you rule them out?
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the codebase does this touch? (select all that apply)
+      multiple: true
+      options:
+        - Storage (markdownStore, dedup, scoring, search)
+        - LM Tools (storeMemory, queryMemory)
+        - Cleanup / Gap Analysis
+        - UI (tree view, status bar, control panel)
+        - Settings / Configuration
+        - CI / Publishing
+        - Docs
+        - Other
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Screenshots, linked issues, references to similar tools, etc.

@@ -1,0 +1,74 @@
+name: Bug Report
+description: Something is broken or behaving unexpectedly
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please fill in as much detail as possible. Check the **Output** panel (View → Output → HackLM Memory) for error messages before submitting.
+
+  - type: input
+    id: vs-code-version
+    attributes:
+      label: VS Code / Editor Version
+      description: Run `Help → About` to get the version
+      placeholder: "e.g. VS Code 1.99.0 or Google Antigravity 1.2.0"
+    validations:
+      required: true
+
+  - type: input
+    id: extension-version
+    attributes:
+      label: HackLM Memory Version
+      description: Check Extensions view or `package.json`
+      placeholder: "e.g. 1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "e.g. Windows 11, macOS 15, Ubuntu 24.04"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Open workspace
+        2. Start Copilot Chat
+        3. Ask: "remember: use zod for validation"
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: output-log
+    attributes:
+      label: Output Channel Log
+      description: Copy the contents of View → Output → **HackLM Memory**
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Anything else that might be relevant

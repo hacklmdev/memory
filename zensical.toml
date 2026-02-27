@@ -1,0 +1,39 @@
+[project]
+site_name = "HackLM Memory"
+site_url = "https://hacklmdev.github.io/memory/"
+site_description = "Persistent memory for GitHub Copilot — store, search, and inject context across sessions."
+site_author = "HackLM contributors"
+copyright = "Copyright &copy; 2026 HackLM contributors. Licensed under GPL-3.0."
+repo_url = "https://github.com/hacklmdev/memory"
+repo_name = "hacklmdev/memory"
+docs_dir = "docs"
+
+nav = [
+  {"Home" = "index.md"},
+  {"Getting Started" = "getting-started.md"},
+  {"User Guide" = "user-guide.md"},
+  {"Reference" = [
+    {"API Reference" = "api-reference.md"},
+    {"Architecture" = "architecture.md"}
+  ]},
+  {"Development" = [
+    {"Contributing" = "contributing.md"},
+    {"Roadmap" = "roadmap.md"},
+    {"ADR" = "adr.md"}
+  ]}
+]
+
+[project.theme]
+name = "modern"
+features = [
+  "navigation.tabs",
+  "navigation.sections",
+  "navigation.tracking",
+  "navigation.top",
+  "navigation.path",
+  "toc.follow"
+]
+palette = [
+  {scheme = "default", toggle = {icon = "material/brightness-7", name = "Switch to dark mode"}},
+  {scheme = "slate", toggle = {icon = "material/brightness-4", name = "Switch to light mode"}}
+]
