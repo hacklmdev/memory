@@ -14,6 +14,7 @@ import { findWeakest } from '../storage/scoring';
 import { getEffectiveLimit } from '../utils';
 import { resolveModel, sendLmRequest } from '../lm';
 import { triggerGapAnalysis } from './sessionReview';
+import { STORE_COUNT_KEY } from '../globalStateKeys';
 
 const LLM_REDUNDANCY_TIMEOUT_MS = 5000;
 const MAX_ENTRIES_PER_FILE_FOR_LLM = 20;
@@ -25,7 +26,7 @@ export interface StoreMemoryInput {
 }
 
 export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInput> {
-  private context: vscode.ExtensionContext;
+  private readonly context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
@@ -229,15 +230,14 @@ export class StoreMemoryTool implements vscode.LanguageModelTool<StoreMemoryInpu
   }
 
   private async tickCleanupCounter(): Promise<void> {
-    const key = 'hacklm-memory.storeCount';
     const config = vscode.workspace.getConfiguration('hacklm-memory');
     const frequency = config.get<number>('autoCleanupFrequency', 10);
 
-    const count = (this.context.globalState.get<number>(key) ?? 0) + 1;
-    await this.context.globalState.update(key, count);
+    const count = (this.context.globalState.get<number>(STORE_COUNT_KEY) ?? 0) + 1;
+    await this.context.globalState.update(STORE_COUNT_KEY, count);
 
     if (count >= frequency) {
-      await this.context.globalState.update(key, 0);
+      await this.context.globalState.update(STORE_COUNT_KEY, 0);
       // Run cleanup silently in background — don't block the tool response
       import('./cleanupMemory').then(m => m.runCleanup()).catch(() => {});
     }

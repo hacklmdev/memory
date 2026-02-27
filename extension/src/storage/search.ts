@@ -11,7 +11,7 @@ export function searchMemories(
   const keywords = queryLower
     .split(/\s+/)
     .filter(w => w.length > 2)
-    .map(w => w.replace(/[^a-z0-9]/g, ''));
+    .map(w => w.replaceAll(/[^a-z0-9]/g, ''));
 
   const filtered = entries.filter(e => !category || e.category === category);
 

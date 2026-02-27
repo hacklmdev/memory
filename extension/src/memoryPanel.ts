@@ -55,7 +55,7 @@ export async function showMemoryPanel(): Promise<void> {
   }
 }
 
-async function runCleanupInteractive(): Promise<void> {
+export async function runCleanupInteractive(): Promise<void> {
   try {
     await vscode.window.withProgress(
       {
@@ -146,12 +146,12 @@ async function showSettings(): Promise<void> {
           prompt: 'Run cleanup automatically after how many store operations?',
           value: String(config.get('autoCleanupFrequency', 10)),
           validateInput: (v) => {
-            const num = parseInt(v);
+            const num = Number.parseInt(v);
             return num > 0 && num <= 100 ? null : 'Must be between 1 and 100';
           },
         });
         if (frequency) {
-          await config.update('autoCleanupFrequency', parseInt(frequency), vscode.ConfigurationTarget.Global);
+          await config.update('autoCleanupFrequency', Number.parseInt(frequency), vscode.ConfigurationTarget.Global);
           vscode.window.showInformationMessage(`Auto-cleanup set to every ${frequency} store operations.`);
         }
       },
@@ -162,11 +162,10 @@ async function showSettings(): Promise<void> {
       async action() {
         const categories = ['Instruction', 'Quirk', 'Preference', 'Decision', 'Security'];
         const selected = await vscode.window.showQuickPick(
-          categories.map(c => ({
-            label: c,
-            description: `Current limit: ${config.get(`categoryLimit.${c}`, 20)}`,
-            category: c,
-          })),
+          categories.map(c => {
+            const limitKey = `categoryLimit.${c}`;
+            return { label: c, description: `Current limit: ${config.get(limitKey, 20)}`, category: c };
+          }),
           { placeHolder: 'Select category to configure' }
         );
 
@@ -176,7 +175,7 @@ async function showSettings(): Promise<void> {
           prompt: `Max memories for ${selected.category}`,
           value: String(config.get(`categoryLimit.${selected.category}`, 20)),
           validateInput: (v) => {
-            const num = parseInt(v);
+            const num = Number.parseInt(v);
             return num > 0 && num <= 50 ? null : 'Must be between 1 and 50';
           },
         });
@@ -184,7 +183,7 @@ async function showSettings(): Promise<void> {
         if (newLimit) {
           await config.update(
             `categoryLimit.${selected.category}`,
-            parseInt(newLimit),
+            Number.parseInt(newLimit),
             vscode.ConfigurationTarget.Workspace
           );
           vscode.window.showInformationMessage(`${selected.category} limit set to ${newLimit}.`);

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import {
   readAllMemories,
   readCategoryMemories,
@@ -38,7 +38,6 @@ export async function runCleanup(): Promise<string> {
   let prunedCount = 0;
 
   await sanitizeEntryContent(allEntries, actions);
-  await pruneStaleEntries(allEntries, actions);
 
   const clusters = findSimilarClusters(allEntries, MERGE_SIMILARITY_THRESHOLD);
 
@@ -156,7 +155,6 @@ async function normalizeRawLines(actions: string[]): Promise<void> {
           /^Memories stored by/i.test(trimmed)
         ) { return line; }
 
-        // Asterisk bullet → dash bullet
         if (/^\*\s+/.test(trimmed)) {
           changed = true;
           return `- ${trimmed.replace(/^\*\s+/, '').trim()}`;
@@ -193,18 +191,6 @@ async function sanitizeEntryContent(entries: MemoryEntry[], actions: string[]): 
         await appendMemory(entry.category, cleaned);
       }
       actions.push(`Sanitized [${entry.slug ?? entry.category}]: removed double-bracket artifact`);
-    }
-  }
-}
-
-/** Remove known stale status/changelog slugs left by older builds. */
-async function pruneStaleEntries(entries: MemoryEntry[], actions: string[]): Promise<void> {
-  const STALE_SLUGS = new Set(['last-cleanup', 'last-session-debrief']);
-  for (const entry of entries) {
-    if (!entry.slug || !STALE_SLUGS.has(entry.slug)) { continue; }
-    const deleted = await deleteMemory(entry.category, entry.content, entry.slug);
-    if (deleted) {
-      actions.push(`Removed stale entry [${entry.slug}]`);
     }
   }
 }
@@ -255,7 +241,6 @@ async function llmAssignSlugs(entries: MemoryEntry[]): Promise<string[] | null> 
       justification: 'Assigning short topic slugs to untagged memory entries.',
     });
     if (!result) { return null; }
-
 
     const jsonMatch = /\[[\s\S]*\]/.exec(result);
     if (!jsonMatch) { return null; }

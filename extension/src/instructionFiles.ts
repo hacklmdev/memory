@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs/promises';
+import * as path from 'node:path';
+import * as fs from 'node:fs/promises';
 
 const MEMORY_MARKER_START = '<!-- hacklm-memory:start -->';
 const MEMORY_MARKER_END = '<!-- hacklm-memory:end -->';
@@ -76,34 +76,11 @@ async function upsertManagedSection(
   await fs.writeFile(filePath, content, 'utf-8');
 }
 
-const COPILOT_MEMORY_MARKER_START = '<!-- copilot-memory:start -->';
-const COPILOT_MEMORY_MARKER_END = '<!-- copilot-memory:end -->';
-
-/**
- * Remove the legacy copilot-memory block if present — it duplicates hacklm-memory
- * with weaker (and now contradictory) passive-learning language.
- */
-function stripLegacyCopilotMemoryBlock(content: string): string {
-  if (!content.includes(COPILOT_MEMORY_MARKER_START)) { return content; }
-  const start = content.indexOf(COPILOT_MEMORY_MARKER_START);
-  const end = content.indexOf(COPILOT_MEMORY_MARKER_END);
-  if (end === -1) { return content; }
-  const removed = content.substring(0, start) + content.substring(end + COPILOT_MEMORY_MARKER_END.length);
-  return removed.replace(/\n{3,}/g, '\n\n').trim() + '\n';
-}
-
 export async function generateInstructionFiles(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
   const root = workspaceFolder.uri.fsPath;
   const copilotInstructionsPath = path.join(root, '.github', 'copilot-instructions.md');
   const section = getCopilotInstructionsSection();
   await upsertManagedSection(copilotInstructionsPath, section, MEMORY_MARKER_START, MEMORY_MARKER_END);
-
-  // Strip the legacy copilot-memory block which VS Code's built-in memory feature may have injected
-  const current = await fs.readFile(copilotInstructionsPath, 'utf-8').catch(() => '');
-  const cleaned = stripLegacyCopilotMemoryBlock(current);
-  if (cleaned !== current) {
-    await fs.writeFile(copilotInstructionsPath, cleaned, 'utf-8');
-  }
 }
 
 export async function ensureMemoryFiles(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {

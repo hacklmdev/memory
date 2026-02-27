@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import * as path from 'node:path';
 import { readAllMemories, CATEGORY_FILES, type MemoryEntry } from './storage/markdownStore';
 
 export class CategoryItem extends vscode.TreeItem {
@@ -24,8 +24,9 @@ export class MemoryItem extends vscode.TreeItem {
   constructor(public readonly entry: MemoryEntry) {
     super(entry.content, vscode.TreeItemCollapsibleState.None);
     this.description = entry.slug ? `[${entry.slug}]` : '';
+    const slugPart = entry.slug ? ` · \`${entry.slug}\`` : '';
     this.tooltip = new vscode.MarkdownString(
-      `**${entry.category}**${entry.slug ? ` · \`${entry.slug}\`` : ''}\n\n${entry.content}`
+      `**${entry.category}**${slugPart}\n\n${entry.content}`
     );
     this.iconPath = new vscode.ThemeIcon('circle-small-filled');
     this.contextValue = 'memoryEntry';
@@ -96,7 +97,6 @@ export async function revealEntry(entry: MemoryEntry): Promise<void> {
   try {
     const doc = await vscode.workspace.openTextDocument(uri);
     const editor = await vscode.window.showTextDocument(doc, { preview: false });
-
 
     const line = Math.max(0, entry.lineNumber - 1);
     const pos = new vscode.Position(line, 0);

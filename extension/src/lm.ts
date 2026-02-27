@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-export function resolveFamily(): string {
+function resolveFamily(): string {
   return vscode.workspace
     .getConfiguration('hacklm-memory')
     .get<string>('lmFamily', 'gpt-5-mini');

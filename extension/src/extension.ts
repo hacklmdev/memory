@@ -2,16 +2,14 @@ import * as vscode from 'vscode';
 import { generateInstructionFiles, ensureMemoryFiles } from './instructionFiles';
 import { createStatusBar, updateStatusBar } from './statusBar';
 import { showMemoryList, deleteMemoryInteractive, openMemoryFolder } from './storage/markdownStore';
-import { showMemoryPanel, showMemoryStats } from './memoryPanel';
+import { showMemoryPanel, showMemoryStats, runCleanupInteractive } from './memoryPanel';
 import { StoreMemoryTool } from './tools/storeMemory';
 import { QueryMemoryTool } from './tools/queryMemory';
-import { runCleanup } from './tools/cleanupMemory';
 import { TOOL_IDS } from './toolIds';
 import { MemoryTreeProvider, revealEntry } from './memoryTreeView';
-import { getOutputChannel, disposeOutputChannel } from './outputChannel';
+import { disposeOutputChannel } from './outputChannel';
 import { runSessionReview } from './tools/sessionReview';
-
-const FIRST_ACTIVATION_KEY = 'hacklm-memory.firstActivation';
+import { FIRST_ACTIVATION_KEY, INSTRUCTION_CONSENT_KEY } from './globalStateKeys';
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   // Register LM tools first — must run even without a workspace folder
@@ -26,7 +24,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   await ensureMemoryFiles(workspaceFolder);
-  await generateInstructionFiles(workspaceFolder);
+
+  const manageFile = vscode.workspace.getConfiguration('hacklm-memory').get<boolean>('manageInstructionFile', true);
+
+  if (manageFile) {
+    // Already shown consent — just regenerate. First run: prompt the user.
+    const consentShown = context.globalState.get<boolean>(INSTRUCTION_CONSENT_KEY, false);
+    if (consentShown) {
+      await generateInstructionFiles(workspaceFolder);
+    } else {
+      await context.globalState.update(INSTRUCTION_CONSENT_KEY, true);
+      const choice = await vscode.window.showInformationMessage(
+        'HackLM Memory will manage the `.github/copilot-instructions.md` file in your workspace to inject memory references. You can disable this in Settings.',
+        'OK',
+        'Disable'
+      );
+      if (choice === 'Disable') {
+        await vscode.workspace.getConfiguration('hacklm-memory').update('manageInstructionFile', false, vscode.ConfigurationTarget.Global);
+      } else {
+        await generateInstructionFiles(workspaceFolder);
+      }
+    }
+  }
 
   const statusBar = createStatusBar(context);
   context.subscriptions.push(statusBar);
@@ -55,23 +74,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await generateInstructionFiles(workspaceFolder);
       vscode.window.showInformationMessage('HackLM Memory: Instruction files regenerated.');
     }),
-    vscode.commands.registerCommand('hacklm-memory.cleanup', async () => {
-      try {
-        await vscode.window.withProgress(
-          { location: vscode.ProgressLocation.Notification, title: 'Running memory cleanup...', cancellable: false },
-          async () => {
-            const report = await runCleanup();
-            const channel = getOutputChannel();
-            channel.appendLine(report);
-            channel.show(true);
-            const summary = report.split('\n').find(l => /^(Memory is|After:|Merged:|Pruned:)/.test(l.trim())) ?? report.split('\n').find(l => l.trim().length > 0) ?? 'Done.';
-            vscode.window.showInformationMessage(summary);
-          }
-        );
-      } catch (err) {
-        vscode.window.showErrorMessage(`Cleanup failed: ${err}`);
-      }
-    }),
+    vscode.commands.registerCommand('hacklm-memory.cleanup', runCleanupInteractive),
     vscode.commands.registerCommand('hacklm-memory.openWalkthrough', async () => {
       await vscode.commands.executeCommand('setContext', 'hacklm-memory.walkthroughStarted', true);
       await vscode.commands.executeCommand(
@@ -88,14 +91,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   memoryWatcher.onDidChange(onMemoryChange);
   memoryWatcher.onDidCreate(onMemoryChange);
   memoryWatcher.onDidDelete(onMemoryChange);
-  context.subscriptions.push(memoryWatcher);
-
   context.subscriptions.push(
+    memoryWatcher,
     vscode.lm.onDidChangeChatModels(() => updateStatusBar())
   );
 
-  const isFirstActivation = !context.globalState.get(FIRST_ACTIVATION_KEY);
-  if (isFirstActivation) {
+  if (!context.globalState.get(FIRST_ACTIVATION_KEY)) {
     await context.globalState.update(FIRST_ACTIVATION_KEY, true);
     await vscode.commands.executeCommand('hacklm-memory.openWalkthrough');
   }

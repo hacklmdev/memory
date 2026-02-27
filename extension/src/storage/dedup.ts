@@ -29,7 +29,7 @@ export function extractKeywords(text: string): Set<string> {
   return new Set(
     text
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
+      .replaceAll(/[^a-z0-9\s-]/g, '')
       .split(/\s+/)
       .filter(w => w.length > 2 && !STOP_WORDS.has(w))
   );
@@ -38,8 +38,8 @@ export function extractKeywords(text: string): Set<string> {
 function normalize(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/[^a-z0-9\s]/g, '')
+    .replaceAll(/\s+/g, ' ')
     .trim();
 }
 
@@ -74,7 +74,7 @@ export function checkDuplicate(
     const entryNorm = normalize(entry.content);
 
     if (newNorm === entryNorm) {
-      return { similarity: 1.0, matchedEntry: entry, action: 'skip' };
+      return { similarity: 1, matchedEntry: entry, action: 'skip' };
     }
 
     const entryKeywords = extractKeywords(entry.content);

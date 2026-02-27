@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import { readAllMemories, upsertMemory, appendMemory, CATEGORY_FILES, type MemoryEntry } from '../storage/markdownStore';
 import { resolveModel, sendLmRequest } from '../lm';
-
-const GAP_COUNTER_KEY = 'hacklm-memory.gapCounter';
+import { GAP_COUNTER_KEY } from '../globalStateKeys';
 const GAP_ANALYSIS_INTERVAL = 3;
 const MIN_ENTRIES_FOR_ANALYSIS = 5;
 const MAX_SUGGESTIONS = 4;
@@ -69,7 +68,10 @@ async function runGapAnalysis(
   if (!model) { return []; }
 
   const existing = allEntries
-    .map(e => `[${e.category}] ${e.slug ? `[${e.slug}] ` : ''}${e.content}`)
+    .map(e => {
+      const slugPart = e.slug ? `[${e.slug}] ` : '';
+      return `[${e.category}] ${slugPart}${e.content}`;
+    })
     .join('\n');
 
   const recentSection = justStored

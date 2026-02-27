@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 
 /**
  * Per-file write locks — prevents concurrent read-then-write races when
@@ -30,14 +30,6 @@ export const CATEGORY_FILES: Record<string, string> = {
   'Preference': 'preferences.md',
   'Decision': 'decisions.md',
   'Security': 'security.md',
-};
-
-export const CATEGORY_LIMITS: Record<string, number> = {
-  'Instruction': 15,
-  'Quirk': 20,
-  'Preference': 20,
-  'Decision': 20,
-  'Security': 15,
 };
 
 export interface MemoryEntry {
@@ -142,7 +134,7 @@ export async function migrateFiles(): Promise<void> {
 }
 
 function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 // Called on every read-modify-write so old-format files migrate transparently.
@@ -151,7 +143,7 @@ function stripDateHeaders(text: string): string {
     .split('\n')
     .filter(l => !/^## \d{4}-\d{2}-\d{2}/.test(l))
     .join('\n')
-    .replace(/\n{3,}/g, '\n\n');
+    .replaceAll(/\n{3,}/g, '\n\n');
 }
 
 export async function writeConflictLog(
@@ -195,10 +187,10 @@ function parseMemoryFile(text: string, category: string, file: string): MemoryEn
   const lines = text.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
-    const bulletMatch = lines[i].match(/^- (.+)/);
+    const bulletMatch = /^- (.+)/.exec(lines[i]);
     if (!bulletMatch) { continue; }
     const raw = bulletMatch[1].trim();
-    const slugMatch = raw.match(/^\[([^\]]+)\]\s+(.+)/);
+    const slugMatch = /^\[([^\]]+)\]\s+(.+)/.exec(raw);
     entries.push({
       content: slugMatch ? slugMatch[2] : raw,
       category,
