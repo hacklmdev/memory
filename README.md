@@ -1,5 +1,9 @@
 # HackLM Memory
 
+[![CI](https://github.com/hacklmdev/memory/actions/workflows/ci.yml/badge.svg)](https://github.com/hacklmdev/memory/actions/workflows/ci.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Open VSX](https://img.shields.io/open-vsx/v/hacklm/hacklm-memory)](https://open-vsx.org/extension/hacklm/hacklm-memory)
+
 A long-term memory layer for VS Code Copilot — learn from interactions, retain useful insights, and improve over time.
 
 ## What This Does
@@ -8,9 +12,18 @@ A long-term memory layer for VS Code Copilot — learn from interactions, retain
 - **Learns from mistakes**: stores lessons when commands fail or code is rejected
 - **Dedup-aware**: never stores the same insight twice
 - **Self-cleaning**: periodic cleanup merges duplicates and prunes stale memories
-- **Auto-discovers**: scans `package.json` to document build commands in AGENTS.md
 - **Reference-based**: `copilot-instructions.md` points to focused `.memory/` files — agents fetch on-demand
 - **Workspace-scoped**: each project has its own `.memory/` folder
+
+## Compatibility
+
+Works in any Open VSX-compatible editor:
+
+- [VS Code](https://code.visualstudio.com/) 1.99+
+- [Google Antigravity](https://antigravity.google/) (Open VSX)
+- [Gitpod](https://gitpod.io/) (Open VSX)
+
+> **Note:** The memory LM tools (`storeMemory`, `queryMemory`) require the editor to implement the VS Code LM Tool API. Editors that do not implement this API will install the extension but the tools will not be available in chat.
 
 ## Architecture
 
@@ -56,6 +69,16 @@ npm run build
 | `HackLM Memory: Open Memory Folder` | Open `.memory/` in editor |
 | `HackLM Memory: Reinitialize Instruction Files` | Regenerate instruction files |
 | `HackLM Memory: Run Cleanup` | Manually trigger memory cleanup |
+| `HackLM Memory: Review Session` | Run gap analysis to find uncaptured decisions |
+
+## Settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `hacklm-memory.lmFamily` | `gpt-5-mini` | Copilot model family for LM operations |
+| `hacklm-memory.autoApproveStore` | `false` | Skip confirmation prompt when saving memories |
+| `hacklm-memory.manageInstructionFile` | `true` | Allow the extension to manage `.github/copilot-instructions.md` |
+| `hacklm-memory.categoryLimit.*` | varies | Per-category max entry counts |
 
 ## Privacy
 
@@ -63,3 +86,17 @@ npm run build
 - No cloud sync, no telemetry
 - Full user visibility and control
 - `.memory/` can be gitignored for sensitive projects
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR.
+
+- [Architecture](docs/architecture.md) — module map, data flow, key design decisions
+- [API Reference](docs/api-reference.md) — LM tool schemas, memory file format
+- [Developer Guide](docs/contributing.md) — how to add categories, tools, and tests
+- [Architecture Decision Records](docs/decisions.md) — 16 ADRs covering every major decision
+- [Roadmap](docs/roadmap.md) — planned work and open contribution areas
+
+## License
+
+GNU General Public License v3.0 — see [LICENSE](LICENSE).
