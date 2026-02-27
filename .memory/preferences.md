@@ -28,13 +28,17 @@ Memories stored by HackLM Memory.
 
 - [globalstate-cleanup-log-key] The cleanup log is stored under a namespaced globalState key, same as all other extension state. Never write it to a bare key or a separate file outside globalState.
 
-- [tree-view-message-on-empty] When a tree view has no data to show, set treeView.message to a short guidance string in code. This supplements viewsWelcome and handles dynamic empty states after initial load.
-
 - [globalstate-keys-enumerated] All globalState key names are defined as constants in a single file. Never scatter bare string keys across modules.
 
 - [tree-item-context-value] Every TreeItem that supports commands sets a contextValue string. Without it, when-clause conditions in package.json menus cannot target that item type.
 
-
-- [dedup-cleanup-thresholds] Dedup thresholds and cleanup merge thresholds serve different purposes. Never unify them into a single constant. Write thresholds guard against storing duplicates. Cleanup thresholds control when stored entries get merged or removed.
-
 - [globalstate-keys] All globalState key constants live in one file. No module defines its own key inline. Import from the constants file or the key does not exist.
+
+- [docs-site-local-serve] Run the docs site locally with .venv/Scripts/zensical.exe serve. Build the static output with zensical build. Output goes to site/. Never commit the site/ directory.
+
+- [adr-link-to-adrs] The ADR page (docs/adr.md) links to docs/decisions.md for the full ADR list. Keep that link current when new ADRs are added.
+
+- [node-protocol-imports] Use node: protocol for built-in imports (node:fs/promises, node:path). Never import bare 'fs/promises' or 'path'.
+
+- [lm-model-resolution-centralized] Model selection and resolution happen only in lm.ts. No other module calls selectChatModels directly. Import the resolved model from lm.ts or do not use it.
+

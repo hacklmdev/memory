@@ -30,7 +30,16 @@ Memories stored by HackLM Memory.
 
 - [gap-analysis-no-changelog] Gap analysis prompt forbids changelog/past-event suggestions. The LM must not suggest entries phrased as "last cleanup did X" or "removed Y yesterday".
 
-- [category-limits-rationale] Instruction=15, Decision=20, others unchanged. Instructions and Decisions grow fastest on active projects. Context length is not the constraint — quality is.
+- [open-source-license] Project is licensed under GPL-3.0-only. MIT removed. Both root LICENSE and extension/LICENSE hold the GPL v3 text. Both package.json files have "license": "GPL-3.0-only".
+
+- [docs-site-zensical] Docs site uses Zensical (pip install zensical). Config in zensical.toml at repo root. Serve: .venv/Scripts/zensical.exe serve. Build: zensical build → site/. Deploys to GitHub Pages via .github/workflows/docs.yml on push to main.
 
 
-- [model-resolution] Model resolution always happens inside lm.ts. Callers pass a family string or nothing. They never call vscode.lm.selectChatModels directly. This keeps fallback logic in one place.
+- [globalstate-keys-file] All globalState keys live in extension/src/globalStateKeys.ts as named exports. Never use bare string literals for globalState keys elsewhere.
+
+- [category-limits-source] CATEGORY_LIMITS constant removed from markdownStore.ts. Category limits come from VS Code config only (package.json defaults via config.get). Default fallback is hardcoded as 20 in utils.ts.
+
+- [stale-slug-pruner-removed] pruneStaleEntries removed from cleanupMemory.ts. Stale slugs last-cleanup and last-session-debrief no longer exist. ADRs 0001 and 0013 deleted from docs/decisions/ as they documented completed migration periods.
+
+
+- [adr-location] ADRs live in docs/decisions.md but are NOT in the Zensical nav. The nav has an ADR page (docs/adr.md) instead. That page links back to docs/decisions.md on GitHub.
