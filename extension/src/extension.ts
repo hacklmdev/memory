@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { generateInstructionFiles, ensureMemoryFiles } from './instructionFiles';
+import { generateInstructionFiles, ensureMemoryFiles, patchPlanAgent } from './instructionFiles';
 import { createStatusBar, updateStatusBar } from './statusBar';
 import { showMemoryList, deleteMemoryInteractive, openMemoryFolder } from './storage/markdownStore';
 import { showMemoryPanel, showMemoryStats, runCleanupInteractive } from './memoryPanel';
@@ -47,6 +47,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
+  await patchPlanAgent(context);
+
   const statusBar = createStatusBar(context);
   context.subscriptions.push(statusBar);
 
@@ -72,6 +74,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('hacklm-memory.open', openMemoryFolder),
     vscode.commands.registerCommand('hacklm-memory.reinit', async () => {
       await generateInstructionFiles(workspaceFolder);
+      await patchPlanAgent(context);
       vscode.window.showInformationMessage('HackLM Memory: Instruction files regenerated.');
     }),
     vscode.commands.registerCommand('hacklm-memory.cleanup', runCleanupInteractive),

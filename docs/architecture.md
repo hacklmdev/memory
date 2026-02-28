@@ -69,9 +69,17 @@ flowchart TD
 
 ## Key Design Decisions
 
-### Per-file Mutex Locks
+### Two-tier Write Locks
 
-`markdownStore.ts` maintains a `Map<filePath, Promise<void>>` as a chained promise queue. Every read-then-write operation on a `.memory/*.md` file acquires the lock for that specific file. This prevents concurrent `storeMemory` calls and background cleanup from corrupting the same file simultaneously.
+Every write to `.memory/*.md` goes through two stacked locks:
+
+1. **Outer — cross-process advisory lockfile** (`crossProcessLock.ts`): `withCrossProcessLock(memoryDir, fn)` creates `.memory/.lock` with an exclusive `fs.open('wx')` — an atomic OS primitive that works on POSIX and NTFS. Only one process can hold this file at a time. All other processes spin (with linear back-off, max 20 retries) until the holder removes it. Stale locks (dead PID or age > 10 s) are automatically removed, including on extension startup via `clearStaleLockOnStartup()`.
+
+2. **Inner — per-file in-process promise queue** (`markdownStore.ts`): `withFileLock(filePath, fn)` chains a `Promise<void>` per file path. This serialises concurrent async calls within the same extension host process (e.g. `storeMemory` + background cleanup hitting the same category file).
+
+Callers outside `markdownStore.ts` never interact with either lock directly. The combined wrapper `withMemoryWriteLock(filePath, fn)` is the only entry point used by `appendMemory`, `upsertMemory`, `deleteMemory`, and `migrateFiles`.
+
+See [ADR 0018](decisions.md#0018--two-tier-write-locking-for-memory-files) for the full decision record.
 
 ### Centralised LM Access
 
@@ -99,7 +107,7 @@ This extension uses:
 - `vscode.lm.selectChatModels` — to select a Copilot model for redundancy checks and gap analysis
 - `vscode.lm.onDidChangeChatModels` — to refresh the status bar when available models change
 
-These APIs require **VS Code 1.99+** (or any Open VSX-compatible editor that implements the VS Code LM Tool API at the same version level). Editors that do not implement `vscode.lm.registerTool` will install the extension but the memory tools will not be available in chat.
+These APIs require **VS Code 1.99+**. The extension publishes to Open VSX; the memory tools function in any editor that implements the VS Code LM Tool API. A separate MCP-based implementation for additional editors is planned (see [ADR 0017](decisions.md#0017--additional-editor-support-via-mcp)).
 
 ## Future: JetBrains Support
 

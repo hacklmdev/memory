@@ -17,13 +17,27 @@ A long-term memory layer for VS Code Copilot — learn from interactions, retain
 
 ## Compatibility
 
-Works in any Open VSX-compatible editor:
+Requires [VS Code](https://code.visualstudio.com/) 1.99+.
 
-- [VS Code](https://code.visualstudio.com/) 1.99+
-- [Google Antigravity](https://antigravity.google/) (Open VSX)
-- [Gitpod](https://gitpod.io/) (Open VSX)
+Also published to [Open VSX](https://open-vsx.org/extension/hacklm/hacklm-memory) for editors that use the Open VSX registry.
 
-> **Note:** The memory LM tools (`storeMemory`, `queryMemory`) require the editor to implement the VS Code LM Tool API. Editors that do not implement this API will install the extension but the tools will not be available in chat.
+### Open VSX editors
+
+In Open VSX-compatible editors the extension installs and activates. What works depends on whether the editor implements the VS Code LM Tool API:
+
+| Feature | Available |
+|---------|----------|
+| `.memory/*.md` files created on first open | Always |
+| `copilot-instructions.md` reference block injected | Always |
+| `storeMemory` / `queryMemory` LM tools | VS Code LM Tool API required |
+| Tree view, status bar, control panel | VS Code only |
+| LM deduplication and gap analysis | VS Code LM Tool API required |
+
+The `.memory/` files and `copilot-instructions.md` pointer are set up regardless of editor. Once those exist, any AI agent that reads instruction files can access the memory store directly — even without the LM tools.
+
+The full experience (LM tools, UI) requires VS Code 1.99+.
+
+Support for additional editors via MCP is planned — see the [Roadmap](docs/roadmap.md).
 
 ## Architecture
 
@@ -78,7 +92,7 @@ npm run build
 | `hacklm-memory.lmFamily` | `gpt-5-mini` | Copilot model family for LM operations |
 | `hacklm-memory.autoApproveStore` | `false` | Skip confirmation prompt when saving memories |
 | `hacklm-memory.manageInstructionFile` | `true` | Allow the extension to manage `.github/copilot-instructions.md` |
-| `hacklm-memory.categoryLimit.*` | varies | Per-category max entry counts |
+| `hacklm-memory.categoryLimit.*` | varies (30–40) | Per-category max entry counts |
 
 ## Privacy
 
@@ -94,7 +108,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 - [Architecture](docs/architecture.md) — module map, data flow, key design decisions
 - [API Reference](docs/api-reference.md) — LM tool schemas, memory file format
 - [Developer Guide](docs/contributing.md) — how to add categories, tools, and tests
-- [Architecture Decision Records](docs/decisions.md) — 16 ADRs covering every major decision
+- [Architecture Decision Records](docs/decisions.md) — 17 ADRs covering every major decision
 - [Roadmap](docs/roadmap.md) — planned work and open contribution areas
 
 ## License

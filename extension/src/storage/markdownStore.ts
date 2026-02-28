@@ -1,10 +1,13 @@
 import * as vscode from 'vscode';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { withCrossProcessLock, clearStaleLockOnStartup } from './crossProcessLock';
 
 /**
- * Per-file write locks — prevents concurrent read-then-write races when
- * two operations (e.g. store + background cleanup) touch the same file.
+ * Per-file in-process locks — serialises concurrent calls within the same
+ * extension host process. Combined with the cross-process lock below, this
+ * gives two-tier protection: outer = cross-process lockfile, inner = per-file
+ * promise queue.
  */
 const _fileLocks = new Map<string, Promise<void>>();
 
@@ -22,6 +25,15 @@ async function withFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<
       _fileLocks.delete(filePath);
     }
   }
+}
+
+/**
+ * Two-tier write lock: acquires the cross-process directory lock first, then
+ * the in-process per-file lock. Callers outside this module never call
+ * withFileLock or withCrossProcessLock directly.
+ */
+async function withMemoryWriteLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
+  return withCrossProcessLock(path.dirname(filePath), () => withFileLock(filePath, fn));
 }
 
 export const CATEGORY_FILES: Record<string, string> = {
@@ -51,6 +63,7 @@ export function getMemoryDir(): string {
 export async function ensureMemoryDir(): Promise<void> {
   const memDir = getMemoryDir();
   await fs.mkdir(memDir, { recursive: true });
+  await clearStaleLockOnStartup(memDir);
 
   for (const [category, filename] of Object.entries(CATEGORY_FILES)) {
     const filePath = path.join(memDir, filename);
@@ -76,7 +89,7 @@ export async function appendMemory(category: string, content: string): Promise<v
 
   await ensureMemoryDir();
   const filePath = path.join(getMemoryDir(), filename);
-  await withFileLock(filePath, () => fs.appendFile(filePath, `\n- ${content.trim()}\n`, 'utf-8'));
+  await withMemoryWriteLock(filePath, () => fs.appendFile(filePath, `\n- ${content.trim()}\n`, 'utf-8'));
 }
 
 export async function upsertMemory(
@@ -95,7 +108,7 @@ export async function upsertMemory(
   const filePath = path.join(getMemoryDir(), filename);
   const bulletLine = `- [${slug}] ${content.trim()}`;
 
-  return withFileLock(filePath, async () => {
+  return withMemoryWriteLock(filePath, async () => {
     let text = '';
     try {
       text = await fs.readFile(filePath, 'utf-8');
@@ -125,7 +138,7 @@ export async function migrateFiles(): Promise<void> {
       const text = await fs.readFile(filePath, 'utf-8');
       const migrated = stripDateHeaders(text);
       if (migrated !== text) {
-        await withFileLock(filePath, () => fs.writeFile(filePath, migrated, 'utf-8'));
+        await withMemoryWriteLock(filePath, () => fs.writeFile(filePath, migrated, 'utf-8'));
       }
     } catch {
       // skip missing files
@@ -212,7 +225,7 @@ export async function deleteMemory(
   if (!filename) { return false; }
 
   const filePath = path.join(getMemoryDir(), filename);
-  return withFileLock(filePath, async () => {
+  return withMemoryWriteLock(filePath, async () => {
     try {
       const text = await fs.readFile(filePath, 'utf-8');
       const lines = stripDateHeaders(text).split('\n');

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-28
+
+### Added
+
+- Two-tier write locking: cross-process advisory lockfile (`crossProcessLock.ts`) stacked over per-file in-process promise queue — prevents concurrent writes from multiple VS Code windows
+- Plan agent patching: `patchPlanAgent()` injects `queryMemory` + `storeMemory` into the Copilot Chat Plan agent on every activation (idempotent)
+
+### Changed
+
+- Default category limits doubled: Instruction/Security 15→30, Quirk/Preference/Decision 20→40
+- Configurable maximum raised from 50 to 100
+
 ## [1.0.0] - 2026-02-27
 
 ### Added
@@ -30,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-category entry limit settings
 - Getting Started walkthrough (5 steps)
 - esbuild single-file bundle (`dist/extension.js`) — no webpack
-- Publishes to VS Marketplace and Open VSX (compatible with VS Code and Google Antigravity)
+- Publishes to VS Marketplace and Open VSX
 
 [Unreleased]: https://github.com/hacklmdev/memory/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/hacklmdev/memory/releases/tag/v1.0.0

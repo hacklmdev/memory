@@ -251,11 +251,11 @@ Each memory category has a maximum entry count enforced during cleanup. Limits a
 
 | Category | Limit | Rationale |
 |----------|-------|-----------|
-| Instruction | 15 | Low count, high value. Instructions should be crisp. |
-| Decision | 20 | Grows fast on active projects. |
-| Quirk | 20 | Accumulates over time. Cleanup keeps it relevant. |
-| Preference | 20 | Style choices accumulate. |
-| Security | 15 | Should be small and authoritative. |
+| Instruction | 30 | Low count, high value. Instructions should be crisp. |
+| Decision | 40 | Grows fast on active projects. |
+| Quirk | 40 | Accumulates over time. Cleanup keeps it relevant. |
+| Preference | 40 | Style choices accumulate. |
+| Security | 30 | Should be small and authoritative. |
 
 All limits are user-configurable via `hacklm-memory.categoryLimit.<Category>` settings.
 
@@ -315,11 +315,70 @@ HackLM Memory could theoretically support multiple editors. JetBrains requires a
 
 ### Decision
 
-The initial release targets **VS Code-based editors only**: VS Code and any Open VSX-compatible editor. JetBrains support is deferred until a maintainer with JetBrains plugin experience volunteers.
+The initial release targets **VS Code**. JetBrains support is deferred until a maintainer with JetBrains plugin experience volunteers. Support for additional editors will be delivered via MCP (see ADR 0017).
 
 ### Consequences
 
 - The extension is written in TypeScript against the VS Code extension API exclusively.
-- The VS Code LM Tool API (`vscode.lm.registerTool`, `vscode.lm.selectChatModels`) has no JetBrains equivalent.
-- The storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) has no `vscode` dependency and could be extracted into a `core/` package for a future JetBrains port.
+- The storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) has no `vscode` dependency and could be extracted into a `packages/storage` package for future ports.
 - The `.memory/*.md` file format (documented in [`api-reference.md`](api-reference.md)) is the stable, editor-agnostic contract any future implementation must honour.
+
+---
+
+## 0017 — Additional Editor Support via MCP
+
+**Status:** Accepted (not yet implemented)
+
+### Context
+
+Some editors (e.g. Google Antigravity) support MCP (Model Context Protocol), which allows agents to call external tools. These editors do not share the VS Code extension API surface.
+
+### Decision
+
+Support for MCP-capable editors will be delivered as a **separate MCP server** (`mcp/`) rather than by modifying the existing extension. The current extension remains VS Code-focused with no changes.
+
+When the MCP server is built:
+- The storage layer is extracted to `packages/storage` (shared by both `extension/` and `mcp/`).
+- The MCP server accepts `workspaceRoot` as a per-call parameter (no VS Code workspace context).
+- LM-based redundancy checks are omitted — Jaccard fuzzy matching is sufficient without a second LM pass.
+- Gap analysis and session review are omitted — no user-prompt UI exists in the MCP context.
+
+### Consequences
+
+- Zero changes to the existing VS Code extension.
+- No code duplication — storage logic lives once in `packages/storage`.
+- The MCP server is a clean, dependency-light Node.js process.
+- Feature parity is intentionally incomplete: gap analysis and LM dedup are VS Code-only features.
+
+---
+
+## 0018 — Two-tier Write Locking for Memory Files
+
+**Status:** Accepted
+
+### Context
+
+The original in-process `withFileLock` (a chained-promise mutex keyed by file path) only protects concurrent calls within a single extension host process. When multiple agents run in the same worktree — each in its own process — simultaneous read-modify-write operations on the same `.memory/*.md` file produce last-writer-wins corruption. Reddit usage data shows parallel agents on the same worktree is a real pattern (e.g. 8 parallel code-review sub-agents, parallel feature agents).
+
+### Decision
+
+Add a second, outer lock layer: `crossProcessLock.ts` implements a cross-process advisory lockfile at `.memory/.lock`. All writes first acquire this lock, then fall through to the existing per-file in-process lock.
+
+Key choices:
+
+- **One directory-level lock, not per-file lockfiles.** Write frequency is low. A single `.lock` file avoids proliferating 5+ lockfiles and is simpler to reason about.
+- **Pure Node.js — no runtime dependencies.** `fs.open(path, 'wx')` is the atomic exclusive-create primitive; it is one line. The extension has zero runtime npm dependencies and must stay that way.
+- **Stale detection: PID liveness + age fallback.** `process.kill(pid, 0)` checks PID existence without sending a signal. If the PID is gone the lock is stale. Age > 10 s is a fallback for cross-machine or PID-reuse edge cases.
+- **`clearStaleLockOnStartup()` called from `ensureMemoryDir`.** Cleans up any lock file left behind by a crashed process on the first write of a new session.
+
+### Alternatives Rejected
+
+- `proper-lockfile` npm package: correct, but adds a runtime dependency. Not worth it given the core primitive is trivial to implement.
+- Per-file lockfiles: more granular but multiplies file clutter and adds complexity for no practical benefit at current write rates.
+
+### Consequences
+
+- Parallel agents writing memories to the same worktree are serialised. No data loss.
+- Zero new npm dependencies.
+- The `.lock` file is visible in the `.memory/` folder during writes. It is ephemeral (removed on release) and should be added to `.gitignore` by projects that track `.memory/`.
+- `withMemoryWriteLock(filePath, fn)` in `markdownStore.ts` is the only call site — neither lock is accessible outside this module.

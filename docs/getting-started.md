@@ -11,7 +11,9 @@ Open VS Code. Press `Ctrl+Shift+X` to open Extensions. Search for **HackLM Memor
 Or click one of these links:
 
 - [Install from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=hacklm.hacklm-memory)
-- [Install from Open VSX](https://open-vsx.org/extension/hacklm/hacklm-memory) *(for Google Antigravity, Gitpod, and other VS Code-based IDEs)*
+- [Install from Open VSX](https://open-vsx.org/extension/hacklm/hacklm-memory)
+
+> **Using an Open VSX-compatible editor?** The extension installs and sets up the `.memory/` files and `copilot-instructions.md` reference block in any editor. The `storeMemory` and `queryMemory` LM tools, tree view, and status bar require the VS Code LM Tool API and are only available in VS Code 1.99+. See the [compatibility table](../README.md#open-vsx-editors) for details.
 
 ---
 

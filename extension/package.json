@@ -2,7 +2,7 @@
   "name": "hacklm-memory",
   "displayName": "HackLM Memory",
   "description": "Persistent memory layer for VS Code Copilot — learn from interactions, retain insights, improve over time",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "hacklm",
   "icon": "icon.png",
   "license": "GPL-3.0-only",
@@ -289,37 +289,37 @@
         },
         "hacklm-memory.categoryLimit.Instruction": {
           "type": "number",
-          "default": 15,
+          "default": 30,
           "minimum": 1,
-          "maximum": 50,
+          "maximum": 100,
           "markdownDescription": "Max entries to keep in the `Instruction` category."
         },
         "hacklm-memory.categoryLimit.Quirk": {
           "type": "number",
-          "default": 20,
+          "default": 40,
           "minimum": 1,
-          "maximum": 50,
+          "maximum": 100,
           "markdownDescription": "Max entries to keep in the `Quirk` category."
         },
         "hacklm-memory.categoryLimit.Preference": {
           "type": "number",
-          "default": 20,
+          "default": 40,
           "minimum": 1,
-          "maximum": 50,
+          "maximum": 100,
           "markdownDescription": "Max entries to keep in the `Preference` category."
         },
         "hacklm-memory.categoryLimit.Decision": {
           "type": "number",
-          "default": 20,
+          "default": 40,
           "minimum": 1,
-          "maximum": 50,
+          "maximum": 100,
           "markdownDescription": "Max entries to keep in the `Decision` category."
         },
         "hacklm-memory.categoryLimit.Security": {
           "type": "number",
-          "default": 15,
+          "default": 30,
           "minimum": 1,
-          "maximum": 50,
+          "maximum": 100,
           "markdownDescription": "Max entries to keep in the `Security` category."
         },
         "hacklm-memory.autoApproveStore": {

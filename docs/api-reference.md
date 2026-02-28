@@ -116,11 +116,11 @@ Returns `"No memories found."` if no entries match.
 
 | Category | File | Default Limit | What It Stores |
 |----------|------|---------------|----------------|
-| `Instruction` | `.memory/instructions.md` | 15 | How Copilot should behave |
-| `Quirk` | `.memory/quirks.md` | 20 | Project-specific weirdness — non-obvious gotchas |
-| `Preference` | `.memory/preferences.md` | 20 | Style, tone, and design choices |
-| `Decision` | `.memory/decisions.md` | 20 | Architectural commitments |
-| `Security` | `.memory/security.md` | 15 | Rules that must never be broken |
+| `Instruction` | `.memory/instructions.md` | 30 | How Copilot should behave |
+| `Quirk` | `.memory/quirks.md` | 40 | Project-specific weirdness — non-obvious gotchas |
+| `Preference` | `.memory/preferences.md` | 40 | Style, tone, and design choices |
+| `Decision` | `.memory/decisions.md` | 40 | Architectural commitments |
+| `Security` | `.memory/security.md` | 30 | Rules that must never be broken |
 
 Limits are configurable per-category via `hacklm-memory.categoryLimit.<Category>` settings.
 

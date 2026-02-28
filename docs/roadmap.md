@@ -4,10 +4,8 @@
 
 HackLM Memory is a fully functional VS Code extension providing persistent long-term memory for GitHub Copilot. The core pipeline — store, query, dedup, score, cleanup, gap analysis — is complete and working.
 
-Supported editors (via Open VSX):
+Supported editors:
 - VS Code 1.99+
-- Google Antigravity (Open VSX-compatible)
-- Gitpod (Open VSX-compatible)
 
 ---
 
@@ -23,7 +21,7 @@ Start in `extension/src/tools/`.
 
 ### LM API Compatibility Matrix
 
-We don't yet have a systematic record of which Open VSX-compatible editors fully implement the VS Code LM Tool API (`vscode.lm.registerTool`, `vscode.lm.selectChatModels`). Contributions testing HackLM Memory in Google Antigravity and Gitpod — and documenting results — would help users know what to expect.
+VS Code 1.99+ is confirmed working. Other Open VSX-compatible editors are untested. Contributions testing HackLM Memory in additional editors and documenting results are welcome.
 
 ### Export / Import
 
@@ -53,19 +51,34 @@ Start in `extension/src/utils.ts` and `extension/package.json`.
 
 ## Planned Future Work
 
+### Additional Editor Support (MCP-based)
+
+**Status:** Not started. Architecture decided — MCP-based.
+
+Google Antigravity supports MCP (Model Context Protocol), which allows tools to be called by the agent without the VS Code extension API. The plan:
+
+1. Extract the storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) into a shared `packages/storage` package (plain TypeScript/Node, no VS Code dependency).
+2. Build an `mcp/` package — an MCP server that implements `storeMemory` and `queryMemory` tools backed by the shared storage layer.
+3. The MCP server accepts `workspaceRoot` as a tool parameter rather than reading from VS Code context.
+4. LM-based deduplication (redundancy check) is omitted from the MCP server — Jaccard fuzzy matching alone is used. No VS Code LM API equivalent exists in this context.
+5. Gap analysis / session review is omitted from the MCP server — no user prompt UI is available.
+6. Antigravity wires it up via `mcp_config.json`; a `.agent/skills/memory/SKILL.md` tells the agent when to call the tools.
+
+The `.memory/*.md` file format is the stable, editor-agnostic contract. Any implementation must read/write that format correctly for memory to be shareable across editors.
+
+See [ADR 0017](decisions.md#0017--additional-editor-support-via-mcp) for the architectural decision record.
+
 ### JetBrains Support
 
 **Status:** Not started. Deferred until a maintainer or contributor with JetBrains plugin experience volunteers.
 
 What this requires:
-1. Extract the storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) into a shared `core/` package (plain TypeScript/Node, no VS Code dependency).
-2. Write a separate Kotlin/Java IntelliJ Platform plugin that implements the same `.memory/*.md` file format (spec in [api-reference.md](api-reference.md)) and integrates with JetBrains AI Assistant's tool/agent API.
+1. The `packages/storage` extraction from the Antigravity work above (prerequisite).
+2. A separate Kotlin/Java IntelliJ Platform plugin that implements the same `.memory/*.md` file format (spec in [api-reference.md](api-reference.md)) and integrates with JetBrains AI Assistant's tool/agent API.
 3. Publish the JetBrains plugin to [plugins.jetbrains.com](https://plugins.jetbrains.com/).
-
-The `.memory/*.md` file format is the stable, editor-agnostic contract. Any implementation must read/write that format correctly for memory to be shareable across editors.
 
 See [ADR 0016](decisions.md#0016--vs-code-first-jetbrains-deferred) for the architectural decision record.
 
 ### Neovim / Other Editors
 
-Similar to JetBrains — requires a separate plugin implementation using the relevant editor's extension API (nvim-lspconfig, etc.). The `core/` extraction above is a prerequisite.
+Similar to JetBrains — requires a separate plugin implementation using the relevant editor's extension API. The `packages/storage` extraction above is a prerequisite.
