@@ -5,7 +5,7 @@ Thank you for your interest in contributing.
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 20+
-- [VS Code](https://code.visualstudio.com/) 1.99+ (or any Open VSX-compatible editor, e.g. Google Antigravity)
+- [VS Code](https://code.visualstudio.com/) 1.99+
 - Git
 
 ## Build

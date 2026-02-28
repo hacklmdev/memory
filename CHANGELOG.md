@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Per-category entry limit settings
 - Getting Started walkthrough (5 steps)
 - esbuild single-file bundle (`dist/extension.js`) — no webpack
-- Publishes to VS Marketplace and Open VSX (compatible with VS Code and Google Antigravity)
+- Publishes to VS Marketplace and Open VSX
 
 [Unreleased]: https://github.com/hacklmdev/memory/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/hacklmdev/memory/releases/tag/v1.0.0

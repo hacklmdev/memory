@@ -315,11 +315,37 @@ HackLM Memory could theoretically support multiple editors. JetBrains requires a
 
 ### Decision
 
-The initial release targets **VS Code-based editors only**: VS Code and any Open VSX-compatible editor. JetBrains support is deferred until a maintainer with JetBrains plugin experience volunteers.
+The initial release targets **VS Code**. JetBrains support is deferred until a maintainer with JetBrains plugin experience volunteers. Support for additional editors will be delivered via MCP (see ADR 0017).
 
 ### Consequences
 
 - The extension is written in TypeScript against the VS Code extension API exclusively.
-- The VS Code LM Tool API (`vscode.lm.registerTool`, `vscode.lm.selectChatModels`) has no JetBrains equivalent.
-- The storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) has no `vscode` dependency and could be extracted into a `core/` package for a future JetBrains port.
+- The storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) has no `vscode` dependency and could be extracted into a `packages/storage` package for future ports.
 - The `.memory/*.md` file format (documented in [`api-reference.md`](api-reference.md)) is the stable, editor-agnostic contract any future implementation must honour.
+
+---
+
+## 0017 — Additional Editor Support via MCP
+
+**Status:** Accepted (not yet implemented)
+
+### Context
+
+Some editors (e.g. Google Antigravity) support MCP (Model Context Protocol), which allows agents to call external tools. These editors do not share the VS Code extension API surface.
+
+### Decision
+
+Support for MCP-capable editors will be delivered as a **separate MCP server** (`mcp/`) rather than by modifying the existing extension. The current extension remains VS Code-focused with no changes.
+
+When the MCP server is built:
+- The storage layer is extracted to `packages/storage` (shared by both `extension/` and `mcp/`).
+- The MCP server accepts `workspaceRoot` as a per-call parameter (no VS Code workspace context).
+- LM-based redundancy checks are omitted — Jaccard fuzzy matching is sufficient without a second LM pass.
+- Gap analysis and session review are omitted — no user-prompt UI exists in the MCP context.
+
+### Consequences
+
+- Zero changes to the existing VS Code extension.
+- No code duplication — storage logic lives once in `packages/storage`.
+- The MCP server is a clean, dependency-light Node.js process.
+- Feature parity is intentionally incomplete: gap analysis and LM dedup are VS Code-only features.

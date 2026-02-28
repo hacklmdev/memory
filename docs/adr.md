@@ -32,9 +32,9 @@ This makes the codebase predictable. When LM behaviour changes, you edit one fil
 
 ## 4. Editor-agnostic storage
 
-The `.memory/*.md` file format is the stable contract — not VS Code, not TypeScript, not this extension. A future JetBrains plugin or Neovim integration must read and write the same format for memory to be shareable across editors.
+The `.memory/*.md` file format is the stable contract — not VS Code, not TypeScript, not this extension. Any future port (JetBrains plugin, Neovim integration, MCP server for Google Antigravity) must read and write the same format for memory to be shareable across editors.
 
-The storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) has no VS Code dependency and must stay that way.
+The storage layer (`dedup.ts`, `scoring.ts`, `search.ts`, `markdownStore.ts`) has no VS Code dependency and must stay that way. When additional editor support is built, this layer is extracted to `packages/storage` and shared — not copied.
 
 ---
 

@@ -18,7 +18,7 @@ Free. No cloud. No sign-up. Works in VS Code out of the box.
 
 [Get started →](getting-started.md)
 
-Also on [Open VSX](https://open-vsx.org/extension/hacklm/hacklm-memory) for Google Antigravity, Gitpod, and other VS Code-based IDEs.
+Also on [Open VSX](https://open-vsx.org/extension/hacklm/hacklm-memory). Support for additional editors is [planned](roadmap.md).
 
 ---
 
