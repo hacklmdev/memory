@@ -2,7 +2,7 @@
   "name": "hacklm-memory",
   "displayName": "HackLM Memory",
   "description": "Persistent memory layer for VS Code Copilot — learn from interactions, retain insights, improve over time",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "hacklm",
   "icon": "icon.png",
   "license": "GPL-3.0-only",
