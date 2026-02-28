@@ -111,11 +111,11 @@ All settings are under `hacklm-memory.*`. Open them in **Settings UI** (`Ctrl+,`
 | `autoCleanupFrequency` | `10` | Global | Auto-cleanup after every N store operations |
 | `autoApproveStore` | `false` | Global | Skip the confirmation prompt when saving memories |
 | `manageInstructionFile` | `true` | Global | Allow the extension to manage the `<!-- hacklm-memory -->` block in `.github/copilot-instructions.md` |
-| `categoryLimit.Instruction` | `15` | Workspace | Max entries in the Instruction category |
-| `categoryLimit.Quirk` | `20` | Workspace | Max entries in the Quirk category |
-| `categoryLimit.Preference` | `20` | Workspace | Max entries in the Preference category |
-| `categoryLimit.Decision` | `20` | Workspace | Max entries in the Decision category |
-| `categoryLimit.Security` | `15` | Workspace | Max entries in the Security category |
+| `categoryLimit.Instruction` | `30` | Workspace | Max entries in the Instruction category |
+| `categoryLimit.Quirk` | `40` | Workspace | Max entries in the Quirk category |
+| `categoryLimit.Preference` | `40` | Workspace | Max entries in the Preference category |
+| `categoryLimit.Decision` | `40` | Workspace | Max entries in the Decision category |
+| `categoryLimit.Security` | `30` | Workspace | Max entries in the Security category |
 
 ---
 

@@ -164,7 +164,7 @@ async function showSettings(): Promise<void> {
         const selected = await vscode.window.showQuickPick(
           categories.map(c => {
             const limitKey = `categoryLimit.${c}`;
-            return { label: c, description: `Current limit: ${config.get(limitKey, 20)}`, category: c };
+            return { label: c, description: `Current limit: ${config.get(limitKey, 40)}`, category: c };
           }),
           { placeHolder: 'Select category to configure' }
         );
@@ -176,7 +176,7 @@ async function showSettings(): Promise<void> {
           value: String(config.get(`categoryLimit.${selected.category}`, 20)),
           validateInput: (v) => {
             const num = Number.parseInt(v);
-            return num > 0 && num <= 50 ? null : 'Must be between 1 and 50';
+            return num > 0 && num <= 100 ? null : 'Must be between 1 and 100';
           },
         });
 

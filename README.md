@@ -92,7 +92,7 @@ npm run build
 | `hacklm-memory.lmFamily` | `gpt-5-mini` | Copilot model family for LM operations |
 | `hacklm-memory.autoApproveStore` | `false` | Skip confirmation prompt when saving memories |
 | `hacklm-memory.manageInstructionFile` | `true` | Allow the extension to manage `.github/copilot-instructions.md` |
-| `hacklm-memory.categoryLimit.*` | varies | Per-category max entry counts |
+| `hacklm-memory.categoryLimit.*` | varies (30–40) | Per-category max entry counts |
 
 ## Privacy
 

@@ -34,12 +34,15 @@ Memories stored by HackLM Memory.
 
 - [docs-site-zensical] Docs site uses Zensical (pip install zensical). Config in zensical.toml at repo root. Serve: .venv/Scripts/zensical.exe serve. Build: zensical build → site/. Deploys to GitHub Pages via .github/workflows/docs.yml on push to main.
 
-
 - [globalstate-keys-file] All globalState keys live in extension/src/globalStateKeys.ts as named exports. Never use bare string literals for globalState keys elsewhere.
 
 - [category-limits-source] CATEGORY_LIMITS constant removed from markdownStore.ts. Category limits come from VS Code config only (package.json defaults via config.get). Default fallback is hardcoded as 20 in utils.ts.
 
-- [stale-slug-pruner-removed] pruneStaleEntries removed from cleanupMemory.ts. Stale slugs last-cleanup and last-session-debrief no longer exist. ADRs 0001 and 0013 deleted from docs/decisions/ as they documented completed migration periods.
-
-
 - [adr-location] ADRs live in docs/decisions.md but are NOT in the Zensical nav. The nav has an ADR page (docs/adr.md) instead. That page links back to docs/decisions.md on GitHub.
+
+- [two-tier-write-lock] All memory file writes go through two stacked locks: outer = crossProcessLock.ts advisory lockfile (.memory/.lock, fs.open wx), inner = withFileLock per-file promise queue. withMemoryWriteLock(filePath, fn) in markdownStore.ts is the only entry point. Zero new npm dependencies.
+
+- [dual-lock-write-entry-point] All memory file writes use withMemoryWriteLock in markdownStore.ts as the sole entry point. It stacks an outer cross-process advisory lockfile with an inner per-file promise queue. No other code path may write memory files directly.
+
+
+- [category-limits-defaults] Category defaults doubled: Instruction/Security = 30, Quirk/Preference/Decision = 40. Schema maximum raised to 100. Fallback in utils.ts and UI validation cap updated to match.

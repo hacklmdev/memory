@@ -65,7 +65,7 @@ HackLM Memory gives Copilot a persistent memory across sessions. It stores decis
 | `hacklm-memory.autoApproveStore` | `false` | Skip confirmation when saving memories |
 | `hacklm-memory.manageInstructionFile` | `true` | Manage `.github/copilot-instructions.md` automatically |
 | `hacklm-memory.autoCleanupFrequency` | `10` | Run cleanup automatically every N store operations |
-| `hacklm-memory.categoryLimit.*` | `20` | Max entries per category |
+| `hacklm-memory.categoryLimit.*` | `40` | Max entries per category |
 
 ---
 

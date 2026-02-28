@@ -1,9 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'node:path';
 import * as fs from 'node:fs/promises';
+import { getOutputChannel } from './outputChannel';
 
 const MEMORY_MARKER_START = '<!-- hacklm-memory:start -->';
 const MEMORY_MARKER_END = '<!-- hacklm-memory:end -->';
+
+/** Tools added to the Copilot Plan agent on every activation. */
+const PLAN_AGENT_MEMORY_TOOLS = ['queryMemory', 'storeMemory'] as const;
 
 function getCopilotInstructionsSection(): string {
   return `${MEMORY_MARKER_START}
@@ -74,6 +78,75 @@ async function upsertManagedSection(
 
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, 'utf-8');
+}
+
+function getPlanAgentMemorySection(): string {
+  return `${MEMORY_MARKER_START}
+## Memory Context
+
+Call \`#queryMemory\` at the start of every planning session to retrieve relevant project decisions, conventions, and constraints before researching or drafting.
+
+Call \`#storeMemory\` when the planning discussion surfaces a new architectural decision or constraint not yet in memory. Store it **before presenting the plan**, while the rationale is still in context.
+
+Memory categories most relevant during planning:
+- **Security** — constraints the plan must never violate (always query first)
+- **Decision** — prior architectural commitments the plan must respect
+- **Instruction** — how the team expects work to be approached
+${MEMORY_MARKER_END}`;
+}
+
+/**
+ * Patches the Copilot Chat built-in Plan agent to include memory tools.
+ * Runs on every activation — idempotent. Silent no-op if Copilot Chat is not installed.
+ */
+export async function patchPlanAgent(context: vscode.ExtensionContext): Promise<void> {
+  const planAgentPath = path.join(
+    context.globalStorageUri.fsPath,
+    '..',
+    'github.copilot-chat',
+    'plan-agent',
+    'Plan.agent.md'
+  );
+
+  let content: string;
+  try {
+    content = await fs.readFile(planAgentPath, 'utf-8');
+  } catch {
+    // Copilot Chat not installed or Plan agent absent — silent no-op
+    return;
+  }
+
+  let patched = content;
+
+  // Add memory tools to the tools: array if not already present
+  const toolsLineMatch = /^tools: \[(.+)\]$/m.exec(patched);
+  if (toolsLineMatch) {
+    const existing = toolsLineMatch[1];
+    const toolsToAdd = PLAN_AGENT_MEMORY_TOOLS.filter(t => !existing.includes(`'${t}'`));
+    if (toolsToAdd.length > 0) {
+      const addition = toolsToAdd.map(t => `'${t}'`).join(', ');
+      patched = patched.replace(
+        toolsLineMatch[0],
+        `tools: [${existing}, ${addition}]`
+      );
+    }
+  }
+
+  // Inject/update the memory instructions section in the agent body
+  const section = getPlanAgentMemorySection();
+  if (patched.includes(MEMORY_MARKER_START) && patched.includes(MEMORY_MARKER_END)) {
+    const startIdx = patched.indexOf(MEMORY_MARKER_START);
+    const endIdx = patched.indexOf(MEMORY_MARKER_END) + MEMORY_MARKER_END.length;
+    patched = patched.substring(0, startIdx) + section + patched.substring(endIdx);
+  } else {
+    if (!patched.endsWith('\n')) { patched += '\n'; }
+    patched += '\n' + section + '\n';
+  }
+
+  if (patched !== content) {
+    await fs.writeFile(planAgentPath, patched, 'utf-8');
+    getOutputChannel().appendLine('[HackLM Memory] Patched Plan agent with memory tools.');
+  }
 }
 
 export async function generateInstructionFiles(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
