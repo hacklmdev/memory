@@ -1,7 +1,7 @@
 # HackLM Memory
 
 <p align="center">
-  <img src="icon.png" alt="HackLM Memory" width="128" />
+  <img src="https://raw.githubusercontent.com/hacklmdev/memory/main/extension/icon.png" alt="HackLM Memory" width="128" />
 </p>
 
 <p align="center">
