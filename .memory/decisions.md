@@ -40,9 +40,4 @@ Memories stored by HackLM Memory.
 
 - [adr-location] ADRs live in docs/decisions.md but are NOT in the Zensical nav. The nav has an ADR page (docs/adr.md) instead. That page links back to docs/decisions.md on GitHub.
 
-- [two-tier-write-lock] All memory file writes go through two stacked locks: outer = crossProcessLock.ts advisory lockfile (.memory/.lock, fs.open wx), inner = withFileLock per-file promise queue. withMemoryWriteLock(filePath, fn) in markdownStore.ts is the only entry point. Zero new npm dependencies.
-
-- [dual-lock-write-entry-point] All memory file writes use withMemoryWriteLock in markdownStore.ts as the sole entry point. It stacks an outer cross-process advisory lockfile with an inner per-file promise queue. No other code path may write memory files directly.
-
-
 - [category-limits-defaults] Category defaults doubled: Instruction/Security = 30, Quirk/Preference/Decision = 40. Schema maximum raised to 100. Fallback in utils.ts and UI validation cap updated to match.

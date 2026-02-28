@@ -42,5 +42,3 @@ Memories stored by HackLM Memory.
 
 - [lm-model-resolution-centralized] Model selection and resolution happen only in lm.ts. No other module calls selectChatModels directly. Import the resolved model from lm.ts or do not use it.
 
-
-- [cross-process-lock-location] The advisory lockfile used for cross-process locking lives at .memory/.lock. No other path is used. Do not move it or create per-file lockfiles alongside memory entries.
